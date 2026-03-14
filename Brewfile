@@ -34,6 +34,7 @@ brew "mas"
 cask "iterm2"
 cask "docker-desktop"
 cask "claude-code"
+cask "copilot-cli"
 
 # ==========================================================
 # Productivity Applications

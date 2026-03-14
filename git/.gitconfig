@@ -1,0 +1,12 @@
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+[user]
+	name = TJ Bah
+	email = 31374716+tmdbah@users.noreply.github.com
+[init]
+	defaultBranch = main
+[core]
+	editor = code --wait

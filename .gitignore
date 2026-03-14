@@ -4,6 +4,10 @@
 id_rsa
 id_ed25519
 id_ecdsa
+**/.ssh/*
+!**/.ssh/config
+!**/.ssh/config.d/
+!**/.ssh/config.d/**
 
 # macOS junk
 .DS_Store

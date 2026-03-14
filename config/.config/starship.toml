@@ -1,0 +1,79 @@
+# ~/.config/starship.toml
+# Modern Mac dev setup
+
+# ------------------------
+# Directory
+# ------------------------
+[directory]
+truncation_length = 3
+read_only = " 🔒"  # shows if folder is read-only
+style = "cyan bold"
+
+# ------------------------
+# Git branch
+# ------------------------
+[git_branch]
+symbol = "🌿 "
+truncation_length = 4
+style = "green bold"
+
+# ------------------------
+# Git status symbols
+# ------------------------
+[git_status]
+format = "[$all_status$ahead_behind]($style) "
+conflicted = "💥"
+ahead = "⇡"
+behind = "⇣"
+staged = "●"
+modified = "✚"
+untracked = "…"
+stashed = "⚑"
+renamed = "»"
+deleted = "✖"
+style = "yellow"
+
+# ------------------------
+# Node.js
+# ------------------------
+[nodejs]
+format = "via [$symbol($version)]($style) "
+disabled = false
+style = "blue"
+
+# ------------------------
+# Python
+# ------------------------
+[python]
+format = "🐍 [$version]($style) "
+disabled = false
+style = "yellow"
+
+# ------------------------
+# Docker context
+# ------------------------
+[docker_context]
+format = "🐳 [$context]($style) "
+disabled = false
+style = "blue"
+
+# ------------------------
+# Command duration (only show if >2s)
+# ------------------------
+[cmd_duration]
+min_time = 2_000
+format = "took [$duration]($style) "
+style = "bold green"
+
+# ------------------------
+# Character / Prompt arrow
+# ------------------------
+[character]
+success_symbol = "[❯](bold green) "  # normal prompt
+error_symbol = "[✖](bold red) "      # when last command failed
+
+# ------------------------
+# Disable battery (optional for Mac)
+# ------------------------
+[battery]
+disabled = true

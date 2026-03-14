@@ -8,6 +8,7 @@ This repository contains configuration files and scripts to set up and customize
 - **Brewfile**: List of Homebrew packages and casks to be installed for system setup.
 - **bin/**: Custom scripts for automation and system checks.
   - scan_apps_brew_check.sh: Script to scan installed applications and check against Homebrew.
+  - stow_all.sh: Apply all dotfile packages with GNU Stow (`--dry-run` supported).
 - **config/**: Configuration files for various tools and environments.
 - **git/**: Git configuration files and templates.
 - **shell/**: Shell configuration files (e.g., bash, zsh).
@@ -25,7 +26,12 @@ This repository contains configuration files and scripts to set up and customize
    ```sh
    ./bootstrap.sh
    ```
-3. Review and customize configuration files as needed.
+3. Apply dotfiles with Stow:
+   ```sh
+   ./bin/stow_all.sh --dry-run
+   ./bin/stow_all.sh
+   ```
+4. Review and customize configuration files as needed.
 
 ## Notes
 
