@@ -23,10 +23,20 @@ This repository contains configuration files and scripts to set up and customize
    git clone https://github.com/yourusername/dotfiles.git
    ```
 2. Run the bootstrap script:
+    ```sh
+    ./bootstrap.sh
+    ```
+   What `bootstrap.sh` does:
+   - Installs Homebrew (if missing) and loads Homebrew environment.
+   - Runs `brew bundle --file Brewfile`.
+   - Applies dotfiles via `./bin/stow_all.sh`.
+   - Initializes `nvm` and installs Node LTS as the default version.
+
+   You can preview actions with:
    ```sh
-   ./bootstrap.sh
+   ./bootstrap.sh --dry-run
    ```
-3. Apply dotfiles with Stow:
+3. Apply dotfiles with Stow manually (optional, already done by bootstrap):
    ```sh
    ./bin/stow_all.sh --dry-run
    ./bin/stow_all.sh

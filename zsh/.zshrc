@@ -103,10 +103,9 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-# Sets the NVM_DIR environment variable to specify the directory where Node Version Manager (NVM) is installed.
-# This is typically used to manage multiple versions of Node.js on the system.
-export NVM_DIR="/opt/homebrew/opt/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+# Homebrew installs nvm.sh under /opt/homebrew, but Node versions should live in ~/.nvm.
+export NVM_DIR="$HOME/.nvm"
+[ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"
 
 
 # This script configures environment variables in the .zshrc file:
@@ -124,8 +123,8 @@ compinit
 # End of Docker CLI completions
 
 
-# Load Angular CLI autocompletion.
-source <(ng completion script)
+# Load Angular CLI autocompletion when available.
+command -v ng >/dev/null 2>&1 && source <(ng completion script)
 
 # Initialize Starship prompt
 eval "$(starship init zsh)"
