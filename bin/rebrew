@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# re.Brew CLI — Unified command interface for re.Brew.
+# https://github.com/tmdbah/redotbrew
+#
+# Usage:
+#   rebrew <command> [options]
+#
+# Commands:
+#   bootstrap   Run full macOS setup (Homebrew, packages, dotfiles, Git, Node)
+#   scan        Audit installed apps/tools and check Homebrew availability
+#   stow        Apply dotfile symlinks via GNU Stow
+#   sync        Sync Brewfile with currently installed packages
+#   help        Show this help message
+#   version     Print version
+set -euo pipefail
+
+# ── Resolve repo root (works through symlinks) ──────────────────────────────
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+REBREW_BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+REBREW_ROOT="$(cd "$REBREW_BIN_DIR/.." && pwd)"
+
+# ── Colors & helpers ─────────────────────────────────────────────────────────
+if [[ -t 1 ]]; then
+  GREEN='\033[0;32m'
+  RED='\033[0;31m'
+  YELLOW='\033[0;33m'
+  CYAN='\033[0;36m'
+  BOLD='\033[1m'
+  RESET='\033[0m'
+else
+  GREEN='' RED='' YELLOW='' CYAN='' BOLD='' RESET=''
+fi
+
+info()  { printf "${CYAN}==> %s${RESET}\n" "$*"; }
+ok()    { printf "${GREEN} ✓  %s${RESET}\n" "$*"; }
+warn()  { printf "${YELLOW} ⚠  %s${RESET}\n" "$*"; }
+err()   { printf "${RED} ✖  %s${RESET}\n" "$*" >&2; }
+
+# ── Version ──────────────────────────────────────────────────────────────────
+version() {
+  local ver
+  if [[ -f "$REBREW_ROOT/VERSION" ]]; then
+    ver="$(cat "$REBREW_ROOT/VERSION")"
+  else
+    ver="unknown"
+  fi
+  echo "rebrew $ver"
+}
+
+# ── Help ─────────────────────────────────────────────────────────────────────
+usage() {
+  cat <<EOF
+${BOLD}rebrew${RESET} — Your dotfiles, re-brewed.
+
+${BOLD}Usage:${RESET}
+  rebrew <command> [options]
+
+${BOLD}Commands:${RESET}
+  bootstrap   Run full macOS setup (Homebrew, packages, dotfiles, Git, Node)
+  scan        Audit installed apps/tools and check Homebrew availability
+  stow        Apply dotfile symlinks via GNU Stow
+  sync        Sync Brewfile with currently installed packages
+  help        Show this help message
+  version     Print version
+
+${BOLD}Examples:${RESET}
+  rebrew bootstrap --dry-run      Preview the full setup without making changes
+  rebrew scan --output-dir ~/Desktop
+  rebrew stow --dry-run git zsh   Preview symlinks for git and zsh only
+  rebrew sync                     Show drift between installed packages and Brewfile
+  rebrew sync --apply             Overwrite Brewfile with current state
+
+Run ${BOLD}rebrew <command> --help${RESET} for command-specific options.
+EOF
+}
+
+# ── macOS guard ──────────────────────────────────────────────────────────────
+require_macos() {
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    err "rebrew currently supports macOS only."
+    exit 1
+  fi
+}
+
+# ── Subcommand: bootstrap ────────────────────────────────────────────────────
+cmd_bootstrap() {
+  require_macos
+  exec "$REBREW_ROOT/bootstrap.sh" "$@"
+}
+
+# ── Subcommand: scan ─────────────────────────────────────────────────────────
+cmd_scan() {
+  require_macos
+  exec "$REBREW_ROOT/bin/scan_apps_brew_check.sh" "$@"
+}
+
+# ── Subcommand: stow ────────────────────────────────────────────────────────
+cmd_stow() {
+  exec "$REBREW_ROOT/bin/stow_all.sh" "$@"
+}
+
+# ── Subcommand: sync ────────────────────────────────────────────────────────
+cmd_sync() {
+  require_macos
+  exec "$REBREW_ROOT/bin/sync.sh" "$@"
+}
+
+# ── Main dispatcher ──────────────────────────────────────────────────────────
+main() {
+  local cmd="${1:-help}"
+  shift 2>/dev/null || true
+
+  case "$cmd" in
+    bootstrap)  cmd_bootstrap "$@" ;;
+    scan)       cmd_scan "$@" ;;
+    stow)       cmd_stow "$@" ;;
+    sync)       cmd_sync "$@" ;;
+    help|-h|--help)
+                usage ;;
+    version|-v|--version)
+                version ;;
+    *)
+      err "Unknown command: $cmd"
+      echo ""
+      usage >&2
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

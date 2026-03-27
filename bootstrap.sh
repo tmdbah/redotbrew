@@ -45,6 +45,16 @@ run brew bundle --file "$BREWFILE"
 echo "==> Applying dotfiles with stow..."
 run "$DOTFILES_DIR/bin/stow_all.sh"
 
+echo "==> Installing rebrew CLI..."
+REBREW_LINK="/usr/local/bin/rebrew"
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "[dry-run] ln -sf $DOTFILES_DIR/bin/rebrew $REBREW_LINK"
+else
+  mkdir -p "$(dirname "$REBREW_LINK")"
+  ln -sf "$DOTFILES_DIR/bin/rebrew" "$REBREW_LINK"
+  echo "  Linked: $REBREW_LINK → $DOTFILES_DIR/bin/rebrew"
+fi
+
 GIT_LOCAL="$HOME/.gitconfig.local"
 if [[ ! -f "$GIT_LOCAL" ]]; then
   echo "==> Setting up Git identity..."
