@@ -3,9 +3,8 @@
 	required = true
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
-[user]
-	name = TJ Bah
-	email = 31374716+tmdbah@users.noreply.github.com
+[include]
+	path = ~/.gitconfig.local
 [init]
 	defaultBranch = main
 [core]

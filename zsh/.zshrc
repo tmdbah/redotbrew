@@ -117,7 +117,7 @@ export JAVA_HOME=$(/usr/libexec/java_home -v 17.0.15)
 export PATH=$JAVA_HOME/bin:$PATH
 export PATH=${PATH}:/usr/local/mysql/bin
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-fpath=(/Users/tmdbah/.docker/completions $fpath)
+fpath=($HOME/.docker/completions $fpath)
 autoload -Uz compinit
 compinit
 # End of Docker CLI completions

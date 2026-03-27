@@ -45,6 +45,23 @@ run brew bundle --file "$BREWFILE"
 echo "==> Applying dotfiles with stow..."
 run "$DOTFILES_DIR/bin/stow_all.sh"
 
+GIT_LOCAL="$HOME/.gitconfig.local"
+if [[ ! -f "$GIT_LOCAL" ]]; then
+  echo "==> Setting up Git identity..."
+  if [[ "$DRY_RUN" == "true" ]]; then
+    echo "[dry-run] Prompt for Git name and email, write to $GIT_LOCAL"
+  else
+    read -rp "Your full name for Git commits: " git_name
+    read -rp "Your email for Git commits: " git_email
+    cat > "$GIT_LOCAL" <<EOF
+[user]
+	name = $git_name
+	email = $git_email
+EOF
+    echo "  Saved to $GIT_LOCAL"
+  fi
+fi
+
 NVM_SH=""
 if [[ -s "/opt/homebrew/opt/nvm/nvm.sh" ]]; then
   NVM_SH="/opt/homebrew/opt/nvm/nvm.sh"

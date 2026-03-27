@@ -1,6 +1,6 @@
 # re.Brew
 
-*Your dotfiles, re-brewed.*
+_Your dotfiles, re-brewed._
 
 Audit, migrate, and automate your Mac setup through Homebrew. re.Brew scans what you have, shows what can be managed by brew, and syncs your configs across machines via Git.
 
@@ -34,6 +34,7 @@ Audit, migrate, and automate your Mac setup through Homebrew. re.Brew scans what
    - Installs Homebrew (if missing) and loads Homebrew environment.
    - Runs `brew bundle --file Brewfile`.
    - Applies dotfiles via `./bin/stow_all.sh`.
+   - Prompts for your Git name and email (saved to `~/.gitconfig.local`, which is gitignored).
    - Initializes `nvm` and installs Node LTS as the default version.
 
    You can preview actions with:
@@ -41,6 +42,19 @@ Audit, migrate, and automate your Mac setup through Homebrew. re.Brew scans what
    ```sh
    ./bootstrap.sh --dry-run
    ```
+
+## Personalize
+
+`bootstrap.sh` automatically prompts for your Git identity on first run and saves it to `~/.gitconfig.local` (gitignored, never committed). The repo's `git/.gitconfig` pulls it in via `[include]`.
+
+To update your identity later:
+
+```sh
+git config --file ~/.gitconfig.local user.name "Your Name"
+git config --file ~/.gitconfig.local user.email "your-email@example.com"
+```
+
+> **Tip:** Use your [GitHub noreply email](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/setting-your-commit-email-address) for privacy.
 
 ## Manage Dotfiles with Stow
 
@@ -125,6 +139,6 @@ open ~/Downloads/installed_apps_audit.html
 
 ---
 
-**redotbrew** — *re.Brew* | Your dotfiles, re-brewed.
+**redotbrew** — _re.Brew_ | Your dotfiles, re-brewed.
 
 Feel free to modify these files to suit your workflow.
