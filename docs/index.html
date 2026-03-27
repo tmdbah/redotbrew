@@ -1,678 +1,1153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>re.Brew — Your dotfiles, re-brewed</title>
-  <meta name="description" content="Bootstrap a fresh Mac in minutes. Manage dotfiles across machines. Audit every installed app and migrate to Homebrew." />
-  <meta property="og:title"       content="re.Brew — Your dotfiles, re-brewed" />
-  <meta property="og:description" content="Bootstrap a fresh Mac in minutes. Manage dotfiles and audit every installed app." />
-  <meta property="og:url"         content="https://rebrew.sh" />
-  <link rel="canonical"           href="https://rebrew.sh" />
-  <!-- emoji favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>" />
-  <style>
-    /* ── tokens ─────────────────────────────────────────────────── */
-    :root {
-      --bg:        #0c1120;
-      --bg-alt:    #0e1428;
-      --panel:     #131b2e;
-      --panel-2:   #1b2642;
-      --text:      #e4ecf8;
-      --muted:     #8fa8cc;
-      --border:    #253054;
-      --accent:    #5aaeff;
-      /* amber — subtle nod to 🍺 Homebrew */
-      --amber:     #e8a020;
-      --amber-dim: rgba(232,160,32,0.10);
-      --amber-glow:rgba(232,160,32,0.06);
-      --ok:        #37b26c;
-      --radius:    12px;
-      --font:      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --mono:      "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); overflow-x: hidden; line-height: 1.65; }
-
-    /* ── util ──────────────────────────────────────────────────── */
-    a { color: inherit; text-decoration: none; }
-    code {
-      font-family: var(--mono);
-      font-size: 0.85em;
-      background: var(--panel-2);
-      color: var(--accent);
-      padding: 2px 6px;
-      border-radius: 4px;
-    }
-    .container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-
-    .btn {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 12px 22px; border-radius: 8px;
-      font-size: 15px; font-weight: 600; font-family: var(--font);
-      border: none; cursor: pointer; white-space: nowrap;
-      transition: background .18s, color .18s, border-color .18s, transform .15s;
-      text-decoration: none;
-    }
-    .btn-primary  { background: var(--amber); color: #0c1120; }
-    .btn-primary:hover { background: #f0b030; transform: translateY(-1px); }
-    .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
-    .btn-secondary:hover { border-color: var(--amber); color: var(--amber); }
-    .btn-sm { padding: 7px 14px; font-size: 13px; }
-
-    /* ── nav ───────────────────────────────────────────────────── */
-    .nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(12,17,32,.88);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border-bottom: 1px solid var(--border);
-    }
-    .nav-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      max-width: 1080px; margin: 0 auto; padding: 0 24px; height: 58px;
-    }
-    .nav-logo { font-size: 20px; font-weight: 800; letter-spacing: -.4px; }
-    .logo-re   { color: var(--amber); }
-    .logo-brew { color: var(--text); }
-
-    .nav-links { display: flex; align-items: center; gap: 2px; list-style: none; }
-    .nav-links a {
-      color: var(--muted); font-size: 14px;
-      padding: 6px 12px; border-radius: 6px;
-      transition: color .14s;
-    }
-    .nav-links a:hover { color: var(--text); }
-
-    .nav-toggle { display: none; background: none; border: none; color: var(--text); font-size: 22px; cursor: pointer; }
-
-    /* ── hero ──────────────────────────────────────────────────── */
-    .hero {
-      min-height: calc(100vh - 58px);
-      display: flex; align-items: center;
-      padding: 80px 0;
-      position: relative;
-      overflow: hidden;
-    }
-    /* subtle radial glows — amber left, blue right */
-    .hero::before, .hero::after {
-      content: ""; position: absolute; pointer-events: none;
-      border-radius: 50%;
-    }
-    .hero::before {
-      width: 600px; height: 600px;
-      top: -150px; left: -200px;
-      background: radial-gradient(circle, var(--amber-glow) 0%, transparent 65%);
-    }
-    .hero::after {
-      width: 500px; height: 500px;
-      bottom: -100px; right: -180px;
-      background: radial-gradient(circle, rgba(90,174,255,.06) 0%, transparent 65%);
-    }
-
-    .hero-inner {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 52px;
-      align-items: center;
-      width: 100%;
-    }
-
-    .hero-badge {
-      display: inline-block;
-      font-size: 11px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .12em;
-      color: var(--amber);
-      border: 1px solid rgba(232,160,32,.3);
-      background: var(--amber-dim);
-      border-radius: 999px;
-      padding: 3px 12px;
-      margin-bottom: 20px;
-    }
-
-    .hero-title {
-      font-size: clamp(56px,9vw,100px);
-      font-weight: 900; letter-spacing: -3px; line-height: 1;
-      margin-bottom: 16px;
-    }
-    .title-re   { color: var(--amber); }
-    .title-brew { color: var(--text); }
-
-    .hero-tagline {
-      font-size: clamp(16px,2.2vw,22px);
-      font-style: italic; color: var(--muted);
-      margin-bottom: 16px;
-    }
-    .hero-desc {
-      font-size: 16px; color: var(--muted); line-height: 1.75;
-      margin-bottom: 32px;
-    }
-    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-
-    /* ── terminal widget ───────────────────────────────────────── */
-    .terminal {
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      overflow: hidden;
-      box-shadow: 0 36px 72px rgba(0,0,0,.55);
-    }
-    .terminal-chrome {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--panel-2);
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .tdots { display: flex; gap: 6px; }
-    .dot { width: 12px; height: 12px; border-radius: 50%; }
-    .dot-r { background: #e45555; }
-    .dot-y { background: #f0b429; }
-    .dot-g { background: #37b26c; }
-    .terminal-title { font-size: 12px; font-family: var(--mono); color: var(--muted); margin: 0 auto; }
-
-    .terminal-body {
-      background: #060d1a;
-      padding: 20px 22px;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 1.8;
-      min-height: 230px;
-    }
-    .tl-prompt  { color: #37b26c; }
-    .tl-step    { color: var(--accent); }
-    .tl-output  { color: var(--muted); }
-    .tl-success { color: #37b26c; }
-    .cursor { color: var(--accent); animation: blink 1s step-end infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-    /* ── sections ──────────────────────────────────────────────── */
-    .section { padding: 88px 0; }
-    .section-alt { background: var(--bg-alt); }
-
-    .section-heading { text-align: center; margin-bottom: 52px; }
-    .section-heading h2 { font-size: clamp(26px,4vw,40px); font-weight: 800; letter-spacing: -.4px; margin-bottom: 10px; }
-    .section-heading p  { font-size: 16px; color: var(--muted); }
-
-    /* ── how it works ──────────────────────────────────────────── */
-    .steps {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr auto 1fr;
-      align-items: start;
-      gap: 0;
-    }
-    .step { text-align: center; padding: 0 20px; }
-    .step-num {
-      width: 50px; height: 50px; border-radius: 50%;
-      background: var(--amber-dim);
-      border: 2px solid var(--amber);
-      color: var(--amber);
-      font-size: 20px; font-weight: 800;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 18px;
-    }
-    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
-    .step p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
-    .step-arrow { color: var(--border); font-size: 24px; padding-top: 14px; flex-shrink: 0; }
-
-    /* ── features grid ─────────────────────────────────────────── */
-    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .feature-card {
-      background: var(--panel); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 26px;
-      transition: border-color .2s, transform .2s;
-    }
-    .feature-card:hover { border-color: var(--amber); transform: translateY(-2px); }
-    .feature-icon { font-size: 32px; margin-bottom: 14px; }
-    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-    .feature-card p { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
-    .tags { display: flex; gap: 6px; flex-wrap: wrap; }
-    .tag {
-      font-size: 11px; font-weight: 600;
-      padding: 3px 9px; border-radius: 999px;
-      background: var(--amber-dim);
-      color: var(--amber);
-      border: 1px solid rgba(232,160,32,.2);
-    }
-
-    /* ── dashboard browser ─────────────────────────────────────── */
-    .browser {
-      border-radius: var(--radius); overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: 0 36px 72px rgba(0,0,0,.5);
-      margin-bottom: 14px;
-    }
-    .browser-chrome {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--panel-2);
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .browser-url {
-      font-size: 12px; font-family: var(--mono);
-      color: var(--muted);
-      background: var(--panel);
-      padding: 4px 14px; border-radius: 6px;
-      flex: 1; text-align: center; max-width: 380px; margin: 0 auto;
-      border: 1px solid var(--border);
-    }
-    .browser-viewport { height: 580px; background: var(--panel); }
-    .browser-viewport iframe { width: 100%; height: 100%; border: none; display: block; }
-    .dashboard-note { text-align: center; font-size: 13px; color: var(--muted); }
-
-    /* ── quick start ───────────────────────────────────────────── */
-    .qs-steps { display: flex; flex-direction: column; gap: 18px; max-width: 680px; margin: 0 auto 40px; }
-    .qs-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 7px; }
-    .code-block {
-      position: relative; background: #060d1a;
-      border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
-    }
-    .code-block pre {
-      padding: 14px 56px 14px 18px;
-      font-family: var(--mono); font-size: 13px; line-height: 1.6;
-      color: var(--text); overflow-x: auto;
-    }
-    .copy-btn {
-      position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
-      background: var(--panel-2); color: var(--muted);
-      border: 1px solid var(--border); border-radius: 6px;
-      padding: 4px 10px; font-size: 11px; cursor: pointer;
-      transition: color .14s, border-color .14s; font-family: var(--font);
-    }
-    .copy-btn:hover        { color: var(--text);  border-color: var(--accent); }
-    .copy-btn.copied       { color: var(--ok);    border-color: var(--ok); }
-    .qs-cta { text-align: center; }
-
-    /* ── homage bar ────────────────────────────────────────────── */
-    .homage {
-      padding: 52px 0;
-      border-top:    1px solid rgba(232,160,32,.12);
-      border-bottom: 1px solid rgba(232,160,32,.12);
-      background: linear-gradient(135deg, var(--amber-glow) 0%, transparent 60%);
-    }
-    .homage-inner { display: flex; align-items: center; gap: 24px; }
-    .homage-icon { font-size: 48px; flex-shrink: 0; }
-    .homage-text h3 { font-size: 17px; font-weight: 700; color: var(--amber); margin-bottom: 6px; }
-    .homage-text p  { font-size: 14px; color: var(--muted); line-height: 1.65; }
-    .homage-text a  { color: var(--amber); }
-    .homage-text a:hover { text-decoration: underline; }
-
-    /* ── footer ────────────────────────────────────────────────── */
-    .footer { padding: 44px 0 28px; border-top: 1px solid var(--border); }
-    .footer-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
-    .footer-logo  { font-size: 22px; font-weight: 800; letter-spacing: -.4px; }
-    .footer-tagline { font-size: 14px; color: var(--muted); font-style: italic; }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { font-size: 13px; color: var(--muted); transition: color .14s; }
-    .footer-links a:hover { color: var(--text); }
-    .macos-badge {
-      font-size: 11px; padding: 3px 10px; border-radius: 999px;
-      border: 1px solid var(--border); color: var(--muted); letter-spacing: .04em;
-    }
-    .footer-copy { font-size: 12px; color: var(--muted); }
-    .footer-copy a { color: var(--amber); }
-    .footer-copy a:hover { text-decoration: underline; }
-
-    /* ── responsive ─────────────────────────────────────────────── */
-    @media (max-width: 880px) {
-      .hero-inner  { grid-template-columns: 1fr; }
-      .hero        { min-height: auto; padding: 60px 0; }
-      .terminal    { margin-top: 36px; }
-      .steps       { grid-template-columns: 1fr; }
-      .step-arrow  { display: none; }
-      .feature-grid{ grid-template-columns: 1fr; }
-      .homage-inner{ flex-direction: column; text-align: center; }
-      .browser-viewport { height: 420px; }
-    }
-    @media (max-width: 560px) {
-      .nav-links          { display: none; }
-      .nav-links.open {
-        display: flex; flex-direction: column;
-        position: absolute; top: 58px; left: 0; right: 0;
-        background: var(--panel); border-bottom: 1px solid var(--border);
-        padding: 12px; gap: 2px; z-index: 99;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>re.Brew — Your dotfiles, re-brewed</title>
+    <meta
+      name="description"
+      content="Bootstrap a fresh Mac in minutes. Manage dotfiles across machines. Audit every installed app and migrate to Homebrew."
+    />
+    <meta property="og:title" content="re.Brew — Your dotfiles, re-brewed" />
+    <meta
+      property="og:description"
+      content="Bootstrap a fresh Mac in minutes. Manage dotfiles and audit every installed app."
+    />
+    <meta property="og:url" content="https://rebrew.sh" />
+    <link rel="canonical" href="https://rebrew.sh" />
+    <!-- emoji favicon -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍺</text></svg>"
+    />
+    <style>
+      /* ── tokens ─────────────────────────────────────────────────── */
+      :root {
+        --bg: #0c1120;
+        --bg-alt: #0e1428;
+        --panel: #131b2e;
+        --panel-2: #1b2642;
+        --text: #e4ecf8;
+        --muted: #8fa8cc;
+        --border: #253054;
+        --accent: #5aaeff;
+        /* amber — subtle nod to 🍺 Homebrew */
+        --amber: #e8a020;
+        --amber-dim: rgba(232, 160, 32, 0.1);
+        --amber-glow: rgba(232, 160, 32, 0.06);
+        --ok: #37b26c;
+        --radius: 12px;
+        --font:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        --mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
       }
-      .nav-toggle         { display: block; }
-      .hero-actions       { flex-direction: column; align-items: flex-start; }
-      .browser-viewport   { height: 300px; }
-    }
-  </style>
-</head>
-<body>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        overflow-x: hidden;
+        line-height: 1.65;
+      }
 
-<!-- ── NAV ──────────────────────────────────────────────────────── -->
-<nav class="nav">
-  <div class="nav-inner">
-    <a href="/" class="nav-logo"><span class="logo-re">re.</span><span class="logo-brew">Brew</span></a>
-    <ul class="nav-links" id="nav-links">
-      <li><a href="#how-it-works">How it works</a></li>
-      <li><a href="#features">Features</a></li>
-      <li><a href="#dashboard">Dashboard</a></li>
-      <li><a href="#quickstart">Quick&nbsp;Start</a></li>
-      <li>
-        <a href="https://github.com/tmdbah/redotbrew"
-           class="btn btn-secondary btn-sm"
-           target="_blank" rel="noopener noreferrer">GitHub</a>
-      </li>
-    </ul>
-    <button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
-  </div>
-</nav>
+      /* ── util ──────────────────────────────────────────────────── */
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      code {
+        font-family: var(--mono);
+        font-size: 0.85em;
+        background: var(--panel-2);
+        color: var(--accent);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .container {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
 
-<!-- ── HERO ─────────────────────────────────────────────────────── -->
-<section class="hero" id="home">
-  <div class="container hero-inner">
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        font-family: var(--font);
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+          background 0.18s,
+          color 0.18s,
+          border-color 0.18s,
+          transform 0.15s;
+        text-decoration: none;
+      }
+      .btn-primary {
+        background: var(--amber);
+        color: #0c1120;
+      }
+      .btn-primary:hover {
+        background: #f0b030;
+        transform: translateY(-1px);
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        border-color: var(--amber);
+        color: var(--amber);
+      }
+      .btn-sm {
+        padding: 7px 14px;
+        font-size: 13px;
+      }
 
-    <div>
-      <div class="hero-badge">macOS</div>
-      <h1 class="hero-title">
-        <span class="title-re">re.</span><span class="title-brew">Brew</span>
-      </h1>
-      <p class="hero-tagline">Your dotfiles, re-brewed.</p>
-      <p class="hero-desc">
-        Bootstrap a fresh Mac in minutes. Manage dotfiles across machines.<br>
-        Audit every installed app and migrate to Homebrew — effortlessly.
-      </p>
-      <div class="hero-actions">
-        <a href="https://github.com/tmdbah/redotbrew"
-           class="btn btn-primary"
-           target="_blank" rel="noopener noreferrer">Clone on GitHub</a>
-        <a href="#dashboard" class="btn btn-secondary">See it live ↓</a>
+      /* ── nav ───────────────────────────────────────────────────── */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(12, 17, 32, 0.88);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+        height: 58px;
+      }
+      .nav-logo {
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+      }
+      .logo-re {
+        color: var(--amber);
+      }
+      .logo-brew {
+        color: var(--text);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        list-style: none;
+      }
+      .nav-links a {
+        color: var(--muted);
+        font-size: 14px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        transition: color 0.14s;
+      }
+      .nav-links a:hover {
+        color: var(--text);
+      }
+
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text);
+        font-size: 22px;
+        cursor: pointer;
+      }
+
+      /* ── hero ──────────────────────────────────────────────────── */
+      .hero {
+        min-height: calc(100vh - 58px);
+        display: flex;
+        align-items: center;
+        padding: 80px 0;
+        position: relative;
+        overflow: hidden;
+      }
+      /* subtle radial glows — amber left, blue right */
+      .hero::before,
+      .hero::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+        border-radius: 50%;
+      }
+      .hero::before {
+        width: 600px;
+        height: 600px;
+        top: -150px;
+        left: -200px;
+        background: radial-gradient(
+          circle,
+          var(--amber-glow) 0%,
+          transparent 65%
+        );
+      }
+      .hero::after {
+        width: 500px;
+        height: 500px;
+        bottom: -100px;
+        right: -180px;
+        background: radial-gradient(
+          circle,
+          rgba(90, 174, 255, 0.06) 0%,
+          transparent 65%
+        );
+      }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 52px;
+        align-items: center;
+        width: 100%;
+      }
+
+      .hero-badge {
+        display: inline-block;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--amber);
+        border: 1px solid rgba(232, 160, 32, 0.3);
+        background: var(--amber-dim);
+        border-radius: 999px;
+        padding: 3px 12px;
+        margin-bottom: 20px;
+      }
+
+      .hero-title {
+        font-size: clamp(56px, 9vw, 100px);
+        font-weight: 900;
+        letter-spacing: -3px;
+        line-height: 1;
+        margin-bottom: 16px;
+      }
+      .title-re {
+        color: var(--amber);
+      }
+      .title-brew {
+        color: var(--text);
+      }
+
+      .hero-tagline {
+        font-size: clamp(16px, 2.2vw, 22px);
+        font-style: italic;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .hero-desc {
+        font-size: 16px;
+        color: var(--muted);
+        line-height: 1.75;
+        margin-bottom: 32px;
+      }
+      .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      /* ── terminal widget ───────────────────────────────────────── */
+      .terminal {
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        box-shadow: 0 36px 72px rgba(0, 0, 0, 0.55);
+      }
+      .terminal-chrome {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--panel-2);
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tdots {
+        display: flex;
+        gap: 6px;
+      }
+      .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .dot-r {
+        background: #e45555;
+      }
+      .dot-y {
+        background: #f0b429;
+      }
+      .dot-g {
+        background: #37b26c;
+      }
+      .terminal-title {
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--muted);
+        margin: 0 auto;
+      }
+
+      .terminal-body {
+        background: #060d1a;
+        padding: 20px 22px;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.8;
+        min-height: 230px;
+      }
+      .tl-prompt {
+        color: #37b26c;
+      }
+      .tl-step {
+        color: var(--accent);
+      }
+      .tl-output {
+        color: var(--muted);
+      }
+      .tl-success {
+        color: #37b26c;
+      }
+      .cursor {
+        color: var(--accent);
+        animation: blink 1s step-end infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      /* ── sections ──────────────────────────────────────────────── */
+      .section {
+        padding: 88px 0;
+      }
+      .section-alt {
+        background: var(--bg-alt);
+      }
+
+      .section-heading {
+        text-align: center;
+        margin-bottom: 52px;
+      }
+      .section-heading h2 {
+        font-size: clamp(26px, 4vw, 40px);
+        font-weight: 800;
+        letter-spacing: -0.4px;
+        margin-bottom: 10px;
+      }
+      .section-heading p {
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      /* ── how it works ──────────────────────────────────────────── */
+      .steps {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr auto 1fr;
+        align-items: start;
+        gap: 0;
+      }
+      .step {
+        text-align: center;
+        padding: 0 20px;
+      }
+      .step-num {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--amber-dim);
+        border: 2px solid var(--amber);
+        color: var(--amber);
+        font-size: 20px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 18px;
+      }
+      .step h3 {
+        font-size: 17px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+      .step p {
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      .step-arrow {
+        color: var(--border);
+        font-size: 24px;
+        padding-top: 14px;
+        flex-shrink: 0;
+      }
+
+      /* ── features grid ─────────────────────────────────────────── */
+      .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .feature-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 26px;
+        transition:
+          border-color 0.2s,
+          transform 0.2s;
+      }
+      .feature-card:hover {
+        border-color: var(--amber);
+        transform: translateY(-2px);
+      }
+      .feature-icon {
+        font-size: 32px;
+        margin-bottom: 14px;
+      }
+      .feature-card h3 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .feature-card p {
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.65;
+        margin-bottom: 14px;
+      }
+      .tags {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .tag {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: var(--amber-dim);
+        color: var(--amber);
+        border: 1px solid rgba(232, 160, 32, 0.2);
+      }
+
+      /* ── dashboard browser ─────────────────────────────────────── */
+      .browser {
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        box-shadow: 0 36px 72px rgba(0, 0, 0, 0.5);
+        margin-bottom: 14px;
+      }
+      .browser-chrome {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--panel-2);
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+      .browser-url {
+        font-size: 12px;
+        font-family: var(--mono);
+        color: var(--muted);
+        background: var(--panel);
+        padding: 4px 14px;
+        border-radius: 6px;
+        flex: 1;
+        text-align: center;
+        max-width: 380px;
+        margin: 0 auto;
+        border: 1px solid var(--border);
+      }
+      .browser-viewport {
+        height: 580px;
+        background: var(--panel);
+      }
+      .browser-viewport iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+      }
+      .dashboard-note {
+        text-align: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      /* ── quick start ───────────────────────────────────────────── */
+      .qs-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-width: 680px;
+        margin: 0 auto 40px;
+      }
+      .qs-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 7px;
+      }
+      .code-block {
+        position: relative;
+        background: #060d1a;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .code-block pre {
+        padding: 14px 56px 14px 18px;
+        font-family: var(--mono);
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text);
+        overflow-x: auto;
+      }
+      .copy-btn {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        background: var(--panel-2);
+        color: var(--muted);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 11px;
+        cursor: pointer;
+        transition:
+          color 0.14s,
+          border-color 0.14s;
+        font-family: var(--font);
+      }
+      .copy-btn:hover {
+        color: var(--text);
+        border-color: var(--accent);
+      }
+      .copy-btn.copied {
+        color: var(--ok);
+        border-color: var(--ok);
+      }
+      .qs-cta {
+        text-align: center;
+      }
+
+      /* ── homage bar ────────────────────────────────────────────── */
+      .homage {
+        padding: 52px 0;
+        border-top: 1px solid rgba(232, 160, 32, 0.12);
+        border-bottom: 1px solid rgba(232, 160, 32, 0.12);
+        background: linear-gradient(
+          135deg,
+          var(--amber-glow) 0%,
+          transparent 60%
+        );
+      }
+      .homage-inner {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+      }
+      .homage-icon {
+        font-size: 48px;
+        flex-shrink: 0;
+      }
+      .homage-text h3 {
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--amber);
+        margin-bottom: 6px;
+      }
+      .homage-text p {
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+      .homage-text a {
+        color: var(--amber);
+      }
+      .homage-text a:hover {
+        text-decoration: underline;
+      }
+
+      /* ── footer ────────────────────────────────────────────────── */
+      .footer {
+        padding: 44px 0 28px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        text-align: center;
+      }
+      .footer-logo {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.4px;
+      }
+      .footer-tagline {
+        font-size: 14px;
+        color: var(--muted);
+        font-style: italic;
+      }
+      .footer-links {
+        display: flex;
+        gap: 24px;
+      }
+      .footer-links a {
+        font-size: 13px;
+        color: var(--muted);
+        transition: color 0.14s;
+      }
+      .footer-links a:hover {
+        color: var(--text);
+      }
+      .macos-badge {
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      .footer-copy {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .footer-copy a {
+        color: var(--amber);
+      }
+      .footer-copy a:hover {
+        text-decoration: underline;
+      }
+
+      /* ── responsive ─────────────────────────────────────────────── */
+      @media (max-width: 880px) {
+        .hero-inner {
+          grid-template-columns: 1fr;
+        }
+        .hero {
+          min-height: auto;
+          padding: 60px 0;
+        }
+        .terminal {
+          margin-top: 36px;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+        }
+        .step-arrow {
+          display: none;
+        }
+        .feature-grid {
+          grid-template-columns: 1fr;
+        }
+        .homage-inner {
+          flex-direction: column;
+          text-align: center;
+        }
+        .browser-viewport {
+          height: 420px;
+        }
+      }
+      @media (max-width: 560px) {
+        .nav-links {
+          display: none;
+        }
+        .nav-links.open {
+          display: flex;
+          flex-direction: column;
+          position: absolute;
+          top: 58px;
+          left: 0;
+          right: 0;
+          background: var(--panel);
+          border-bottom: 1px solid var(--border);
+          padding: 12px;
+          gap: 2px;
+          z-index: 99;
+        }
+        .nav-toggle {
+          display: block;
+        }
+        .hero-actions {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .browser-viewport {
+          height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── NAV ──────────────────────────────────────────────────────── -->
+    <nav class="nav">
+      <div class="nav-inner">
+        <a href="/" class="nav-logo"
+          ><span class="logo-re">re.</span
+          ><span class="logo-brew">Brew</span></a
+        >
+        <ul class="nav-links" id="nav-links">
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#dashboard">Dashboard</a></li>
+          <li><a href="#quickstart">Quick&nbsp;Start</a></li>
+          <li>
+            <a
+              href="https://github.com/tmdbah/redotbrew"
+              class="btn btn-secondary btn-sm"
+              target="_blank"
+              rel="noopener noreferrer"
+              >GitHub</a
+            >
+          </li>
+        </ul>
+        <button
+          class="nav-toggle"
+          id="nav-toggle"
+          aria-label="Toggle navigation"
+        >
+          ☰
+        </button>
       </div>
-    </div>
-
-    <div class="terminal" aria-label="Terminal showing bootstrap.sh">
-      <div class="terminal-chrome">
-        <div class="tdots">
-          <span class="dot dot-r"></span>
-          <span class="dot dot-y"></span>
-          <span class="dot dot-g"></span>
-        </div>
-        <span class="terminal-title">bash — ~/dotfiles</span>
-      </div>
-      <div class="terminal-body">
-        <div id="term-lines"></div>
-        <span class="cursor">▌</span>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-<!-- ── HOW IT WORKS ──────────────────────────────────────────────── -->
-<section class="section section-alt" id="how-it-works">
-  <div class="container">
-    <div class="section-heading">
-      <h2>How it works</h2>
-      <p>Three commands. One fully-managed Mac.</p>
-    </div>
-    <div class="steps">
-
-      <div class="step">
-        <div class="step-num">1</div>
-        <h3>Bootstrap</h3>
-        <p>Run <code>./bootstrap.sh</code> on any fresh Mac. It installs Homebrew, your Brewfile, dotfiles via Stow, and nvm + Node LTS — in a single pass.</p>
-      </div>
-
-      <div class="step-arrow">→</div>
-
-      <div class="step">
-        <div class="step-num">2</div>
-        <h3>Manage Dotfiles</h3>
-        <p>Use <code>./bin/stow_all.sh</code> to symlink Zsh, Git, VS&nbsp;Code, and SSH configs from the repo into <code>$HOME</code>. Change once, synced everywhere.</p>
-      </div>
-
-      <div class="step-arrow">→</div>
-
-      <div class="step">
-        <div class="step-num">3</div>
-        <h3>Audit &amp; Migrate</h3>
-        <p>Run <code>./bin/scan_apps_brew_check.sh</code> to scan every app and CLI tool, check Homebrew coverage, and get an interactive HTML report.</p>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ── FEATURES ──────────────────────────────────────────────────── -->
-<section class="section" id="features">
-  <div class="container">
-    <div class="section-heading">
-      <h2>Everything you need</h2>
-      <p>Four focused tools. One cohesive Mac workflow.</p>
-    </div>
-    <div class="feature-grid">
-
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3>bootstrap.sh</h3>
-        <p>One-command Mac setup. Installs Homebrew, runs your Brewfile, applies dotfiles, and bootstraps nvm + Node LTS. Prompts for your Git identity — never committed to the repo.</p>
-        <div class="tags">
-          <span class="tag">Idempotent</span>
-          <span class="tag">--dry-run</span>
-          <span class="tag">Git identity</span>
-        </div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🔗</div>
-        <h3>stow_all.sh</h3>
-        <p>Powered by GNU Stow. Symlinks your configs from the repo into <code>$HOME</code> — no copying, no drift. Use <code>--dry-run</code> to preview or <code>--adopt</code> to pull in existing files.</p>
-        <div class="tags">
-          <span class="tag">GNU Stow</span>
-          <span class="tag">Selective</span>
-          <span class="tag">--adopt</span>
-        </div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>App Audit Dashboard</h3>
-        <p>Scans <code>/Applications</code> and your full <code>$PATH</code>. Checks every item against the Homebrew catalog. Outputs a self-contained HTML dashboard with bar charts, live search, and per-app migration guidance.</p>
-        <div class="tags">
-          <span class="tag">Interactive HTML</span>
-          <span class="tag">CSV export</span>
-          <span class="tag">Parallel scan</span>
-        </div>
-      </div>
-
-      <div class="feature-card">
-        <div class="feature-icon">🗂</div>
-        <h3>Brewfile</h3>
-        <p>A curated manifest of Homebrew formulas, casks, and 60+ VS&nbsp;Code extensions. Fully reproducible. Edit once, apply everywhere with <code>brew bundle</code>.</p>
-        <div class="tags">
-          <span class="tag">Formulas</span>
-          <span class="tag">Casks</span>
-          <span class="tag">VS Code</span>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ── DASHBOARD PREVIEW ─────────────────────────────────────────── -->
-<section class="section section-alt" id="dashboard">
-  <div class="container">
-    <div class="section-heading">
-      <h2>See the audit dashboard live</h2>
-      <p>The interactive HTML report generated by <code>scan_apps_brew_check.sh</code> — sample data shown.</p>
-    </div>
-    <div class="browser">
-      <div class="browser-chrome">
-        <div class="tdots">
-          <span class="dot dot-r"></span>
-          <span class="dot dot-y"></span>
-          <span class="dot dot-g"></span>
-        </div>
-        <div class="browser-url">~/Downloads/installed_apps_audit.html</div>
-      </div>
-      <div class="browser-viewport">
-        <iframe
-          src="sample-audit/index.html"
-          title="re.Brew Installed Apps Audit Dashboard — sample data"
-          loading="lazy"
-          sandbox="allow-scripts allow-same-origin"
-        ></iframe>
-      </div>
-    </div>
-    <p class="dashboard-note">
-      Generate yours: <code>./bin/scan_apps_brew_check.sh &amp;&amp; open ~/Downloads/installed_apps_audit.html</code>
-    </p>
-  </div>
-</section>
-
-<!-- ── QUICK START ───────────────────────────────────────────────── -->
-<section class="section" id="quickstart">
-  <div class="container">
-    <div class="section-heading">
-      <h2>Quick start</h2>
-      <p>Up and running in three steps.</p>
-    </div>
-    <div class="qs-steps">
-
-      <div>
-        <div class="qs-label">1 — Clone the repo</div>
-        <div class="code-block">
-          <pre><code>git clone https://github.com/tmdbah/redotbrew.git ~/dotfiles
-cd ~/dotfiles</code></pre>
-          <button class="copy-btn"
-            data-code="git clone https://github.com/tmdbah/redotbrew.git ~/dotfiles&#10;cd ~/dotfiles">Copy</button>
-        </div>
-      </div>
-
-      <div>
-        <div class="qs-label">2 — Preview with dry-run</div>
-        <div class="code-block">
-          <pre><code>./bootstrap.sh --dry-run</code></pre>
-          <button class="copy-btn" data-code="./bootstrap.sh --dry-run">Copy</button>
-        </div>
-      </div>
-
-      <div>
-        <div class="qs-label">3 — Bootstrap your Mac</div>
-        <div class="code-block">
-          <pre><code>./bootstrap.sh</code></pre>
-          <button class="copy-btn" data-code="./bootstrap.sh">Copy</button>
-        </div>
-      </div>
-
-    </div>
-    <div class="qs-cta">
-      <a href="https://github.com/tmdbah/redotbrew"
-         class="btn btn-primary"
-         target="_blank" rel="noopener noreferrer">Full docs on GitHub →</a>
-    </div>
-  </div>
-</section>
-
-<!-- ── HOMAGE TO HOMEBREW ────────────────────────────────────────── -->
-<section class="homage">
-  <div class="container homage-inner">
-    <div class="homage-icon" aria-hidden="true">🍺</div>
-    <div class="homage-text">
-      <h3>Built on top of Homebrew</h3>
-      <p>
-        re.Brew stands on the shoulders of
-        <a href="https://brew.sh" target="_blank" rel="noopener noreferrer">Homebrew</a>
-        — the Missing Package Manager for macOS. Homebrew's formula and cask ecosystem is what makes
-        reproducible Mac setups possible. Huge respect to the Homebrew maintainers and community
-        for building such an indispensable tool.
-      </p>
-    </div>
-  </div>
-</section>
-
-<!-- ── FOOTER ────────────────────────────────────────────────────── -->
-<footer class="footer">
-  <div class="container footer-inner">
-    <div class="footer-logo"><span class="logo-re">re.</span><span class="logo-brew">Brew</span></div>
-    <p class="footer-tagline">Your dotfiles, re-brewed.</p>
-    <nav class="footer-links">
-      <a href="https://github.com/tmdbah/redotbrew" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <a href="https://github.com/tmdbah/redotbrew/blob/main/README.md" target="_blank" rel="noopener noreferrer">Docs</a>
-      <a href="https://brew.sh" target="_blank" rel="noopener noreferrer">Homebrew</a>
     </nav>
-    <span class="macos-badge">macOS only</span>
-    <p class="footer-copy">
-      MIT License &middot; Powered by
-      <a href="https://brew.sh" target="_blank" rel="noopener noreferrer">Homebrew</a>
-    </p>
-  </div>
-</footer>
 
-<script>
-/* ── terminal typewriter ─────────────────────────────────────── */
-const script = [
-  {cls:"tl-prompt",  text:"$ ./bootstrap.sh"},
-  {cls:"tl-step",    text:"▶ Checking for Homebrew..."},
-  {cls:"tl-output",  text:"  ✓ Already installed. Updating."},
-  {cls:"tl-step",    text:"▶ Running brew bundle..."},
-  {cls:"tl-output",  text:"  Installing 42 formulas and casks..."},
-  {cls:"tl-step",    text:"▶ Stowing dotfiles..."},
-  {cls:"tl-output",  text:"  zsh ✓  git ✓  vscode ✓  config ✓"},
-  {cls:"tl-step",    text:"▶ Setting up nvm + Node LTS..."},
-  {cls:"tl-success", text:"✓ Done! Your Mac is re-brewed."},
-];
+    <!-- ── HERO ─────────────────────────────────────────────────────── -->
+    <section class="hero" id="home">
+      <div class="container hero-inner">
+        <div>
+          <div class="hero-badge">macOS</div>
+          <h1 class="hero-title">
+            <span class="title-re">re.</span
+            ><span class="title-brew">Brew</span>
+          </h1>
+          <p class="hero-tagline">Your dotfiles, re-brewed.</p>
+          <p class="hero-desc">
+            Bootstrap a fresh Mac in minutes. Manage dotfiles across
+            machines.<br />
+            Audit every installed app and migrate to Homebrew — effortlessly.
+          </p>
+          <div class="hero-actions">
+            <a
+              href="https://github.com/tmdbah/redotbrew"
+              class="btn btn-primary"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Clone on GitHub</a
+            >
+            <a href="#dashboard" class="btn btn-secondary">See it live ↓</a>
+          </div>
+        </div>
 
-let lineIdx = 0, charIdx = 0, currentEl = null;
-const container = document.getElementById("term-lines");
+        <div class="terminal" aria-label="Terminal showing bootstrap.sh">
+          <div class="terminal-chrome">
+            <div class="tdots">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+            </div>
+            <span class="terminal-title">bash — ~/redotbrew</span>
+          </div>
+          <div class="terminal-body">
+            <div id="term-lines"></div>
+            <span class="cursor">▌</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-function typeNext() {
-  if (lineIdx >= script.length) { setTimeout(reset, 3400); return; }
-  const line = script[lineIdx];
-  if (charIdx === 0) {
-    currentEl = document.createElement("span");
-    currentEl.className = line.cls;
-    currentEl.style.display = "block";
-    container.appendChild(currentEl);
-  }
-  currentEl.textContent += line.text[charIdx];
-  charIdx++;
-  if (charIdx >= line.text.length) {
-    lineIdx++; charIdx = 0;
-    setTimeout(typeNext, lineIdx >= script.length ? 0 : 90);
-  } else {
-    setTimeout(typeNext, line.cls === "tl-prompt" ? 52 : 16);
-  }
-}
+    <!-- ── HOW IT WORKS ──────────────────────────────────────────────── -->
+    <section class="section section-alt" id="how-it-works">
+      <div class="container">
+        <div class="section-heading">
+          <h2>How it works</h2>
+          <p>Three commands. One fully-managed Mac.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <h3>Bootstrap</h3>
+            <p>
+              Run <code>./bootstrap.sh</code> on any fresh Mac. It installs
+              Homebrew, your Brewfile, dotfiles via Stow, and nvm + Node LTS —
+              in a single pass.
+            </p>
+          </div>
 
-function reset() {
-  container.innerHTML = ""; lineIdx = 0; charIdx = 0; currentEl = null; typeNext();
-}
+          <div class="step-arrow">→</div>
 
-/* start when hero terminal scrolls into view */
-const termEl = document.querySelector(".terminal");
-if (termEl) {
-  const termObserver = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) { typeNext(); termObserver.disconnect(); }
-  }, {threshold:.15});
-  termObserver.observe(termEl);
-  /* fallback — start directly if already visible */
-  if (termEl.getBoundingClientRect().top < window.innerHeight) {
-    termObserver.disconnect();
-    typeNext();
-  }
-}
+          <div class="step">
+            <div class="step-num">2</div>
+            <h3>Manage Dotfiles</h3>
+            <p>
+              Use <code>./bin/stow_all.sh</code> to symlink Zsh, Git,
+              VS&nbsp;Code, and SSH configs from the repo into
+              <code>$HOME</code>. Change once, synced everywhere.
+            </p>
+          </div>
 
-/* ── copy buttons ────────────────────────────────────────────── */
-document.querySelectorAll(".copy-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const text = (btn.dataset.code || "").replace(/&#10;/g, "\n");
-    navigator.clipboard.writeText(text).then(() => {
-      const orig = btn.textContent;
-      btn.textContent = "Copied!";
-      btn.classList.add("copied");
-      setTimeout(() => { btn.textContent = orig; btn.classList.remove("copied"); }, 2000);
-    });
-  });
-});
+          <div class="step-arrow">→</div>
 
-/* ── mobile nav ──────────────────────────────────────────────── */
-const toggle = document.getElementById("nav-toggle");
-const links  = document.getElementById("nav-links");
-toggle.addEventListener("click", () => links.classList.toggle("open"));
-links.querySelectorAll("a").forEach(a => a.addEventListener("click", () => links.classList.remove("open")));
-</script>
+          <div class="step">
+            <div class="step-num">3</div>
+            <h3>Audit &amp; Migrate</h3>
+            <p>
+              Run <code>./bin/scan_apps_brew_check.sh</code> to scan every app
+              and CLI tool, check Homebrew coverage, and get an interactive HTML
+              report.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
 
-</body>
+    <!-- ── FEATURES ──────────────────────────────────────────────────── -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section-heading">
+          <h2>Everything you need</h2>
+          <p>Four focused tools. One cohesive Mac workflow.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>bootstrap.sh</h3>
+            <p>
+              One-command Mac setup. Installs Homebrew, runs your Brewfile,
+              applies dotfiles, and bootstraps nvm + Node LTS. Prompts for your
+              Git identity — never committed to the repo.
+            </p>
+            <div class="tags">
+              <span class="tag">Idempotent</span>
+              <span class="tag">--dry-run</span>
+              <span class="tag">Git identity</span>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🔗</div>
+            <h3>stow_all.sh</h3>
+            <p>
+              Powered by GNU Stow. Symlinks your configs from the repo into
+              <code>$HOME</code> — no copying, no drift. Use
+              <code>--dry-run</code> to preview or <code>--adopt</code> to pull
+              in existing files.
+            </p>
+            <div class="tags">
+              <span class="tag">GNU Stow</span>
+              <span class="tag">Selective</span>
+              <span class="tag">--adopt</span>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>App Audit Dashboard</h3>
+            <p>
+              Scans <code>/Applications</code> and your full <code>$PATH</code>.
+              Checks every item against the Homebrew catalog. Outputs a
+              self-contained HTML dashboard with bar charts, live search, and
+              per-app migration guidance.
+            </p>
+            <div class="tags">
+              <span class="tag">Interactive HTML</span>
+              <span class="tag">CSV export</span>
+              <span class="tag">Parallel scan</span>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon">🗂</div>
+            <h3>Brewfile</h3>
+            <p>
+              A curated manifest of Homebrew formulas, casks, and 60+
+              VS&nbsp;Code extensions. Fully reproducible. Edit once, apply
+              everywhere with <code>brew bundle</code>.
+            </p>
+            <div class="tags">
+              <span class="tag">Formulas</span>
+              <span class="tag">Casks</span>
+              <span class="tag">VS Code</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DASHBOARD PREVIEW ─────────────────────────────────────────── -->
+    <section class="section section-alt" id="dashboard">
+      <div class="container">
+        <div class="section-heading">
+          <h2>See the audit dashboard live</h2>
+          <p>
+            The interactive HTML report generated by
+            <code>scan_apps_brew_check.sh</code> — sample data shown.
+          </p>
+        </div>
+        <div class="browser">
+          <div class="browser-chrome">
+            <div class="tdots">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+            </div>
+            <div class="browser-url">~/Downloads/installed_apps_audit.html</div>
+          </div>
+          <div class="browser-viewport">
+            <iframe
+              src="sample-audit/index.html"
+              title="re.Brew Installed Apps Audit Dashboard — sample data"
+              loading="lazy"
+              sandbox="allow-scripts allow-same-origin"
+            ></iframe>
+          </div>
+        </div>
+        <p class="dashboard-note">
+          Generate yours:
+          <code
+            >./bin/scan_apps_brew_check.sh &amp;&amp; open
+            ~/Downloads/installed_apps_audit.html</code
+          >
+        </p>
+      </div>
+    </section>
+
+    <!-- ── QUICK START ───────────────────────────────────────────────── -->
+    <section class="section" id="quickstart">
+      <div class="container">
+        <div class="section-heading">
+          <h2>Quick start</h2>
+          <p>Up and running in three steps.</p>
+        </div>
+        <div class="qs-steps">
+          <div>
+            <div class="qs-label">1 — Clone the repo</div>
+            <div class="code-block">
+              <pre><code>git clone https://github.com/tmdbah/redotbrew.git ~/redotbrew
+cd ~/redotbrew</code></pre>
+              <button
+                class="copy-btn"
+                data-code="git clone https://github.com/tmdbah/redotbrew.git ~/redotbrew&#10;cd ~/redotbrew"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="qs-label">2 — Preview with dry-run</div>
+            <div class="code-block">
+              <pre><code>./bootstrap.sh --dry-run</code></pre>
+              <button class="copy-btn" data-code="./bootstrap.sh --dry-run">
+                Copy
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="qs-label">3 — Bootstrap your Mac</div>
+            <div class="code-block">
+              <pre><code>./bootstrap.sh</code></pre>
+              <button class="copy-btn" data-code="./bootstrap.sh">Copy</button>
+            </div>
+          </div>
+        </div>
+        <div class="qs-cta">
+          <a
+            href="https://github.com/tmdbah/redotbrew"
+            class="btn btn-primary"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Full docs on GitHub →</a
+          >
+        </div>
+      </div>
+    </section>
+
+    <!-- ── HOMAGE TO HOMEBREW ────────────────────────────────────────── -->
+    <section class="homage">
+      <div class="container homage-inner">
+        <div class="homage-icon" aria-hidden="true">🍺</div>
+        <div class="homage-text">
+          <h3>Built on top of Homebrew</h3>
+          <p>
+            re.Brew stands on the shoulders of
+            <a href="https://brew.sh" target="_blank" rel="noopener noreferrer"
+              >Homebrew</a
+            >
+            — the Missing Package Manager for macOS. Homebrew's formula and cask
+            ecosystem is what makes reproducible Mac setups possible. Huge
+            respect to the Homebrew maintainers and community for building such
+            an indispensable tool.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FOOTER ────────────────────────────────────────────────────── -->
+    <footer class="footer">
+      <div class="container footer-inner">
+        <div class="footer-logo">
+          <span class="logo-re">re.</span><span class="logo-brew">Brew</span>
+        </div>
+        <p class="footer-tagline">Your dotfiles, re-brewed.</p>
+        <nav class="footer-links">
+          <a
+            href="https://github.com/tmdbah/redotbrew"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GitHub</a
+          >
+          <a
+            href="https://github.com/tmdbah/redotbrew/blob/main/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Docs</a
+          >
+          <a href="https://brew.sh" target="_blank" rel="noopener noreferrer"
+            >Homebrew</a
+          >
+        </nav>
+        <span class="macos-badge">macOS only</span>
+        <p class="footer-copy">
+          MIT License &middot; Powered by
+          <a href="https://brew.sh" target="_blank" rel="noopener noreferrer"
+            >Homebrew</a
+          >
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      /* ── terminal typewriter ─────────────────────────────────────── */
+      const script = [
+        { cls: "tl-prompt", text: "$ ./bootstrap.sh" },
+        { cls: "tl-step", text: "▶ Checking for Homebrew..." },
+        { cls: "tl-output", text: "  ✓ Already installed. Updating." },
+        { cls: "tl-step", text: "▶ Running brew bundle..." },
+        { cls: "tl-output", text: "  Installing 42 formulas and casks..." },
+        { cls: "tl-step", text: "▶ Stowing dotfiles..." },
+        { cls: "tl-output", text: "  zsh ✓  git ✓  vscode ✓  config ✓" },
+        { cls: "tl-step", text: "▶ Setting up nvm + Node LTS..." },
+        { cls: "tl-success", text: "✓ Done! Your Mac is re-brewed." },
+      ];
+
+      let lineIdx = 0,
+        charIdx = 0,
+        currentEl = null;
+      const container = document.getElementById("term-lines");
+
+      function typeNext() {
+        if (lineIdx >= script.length) {
+          setTimeout(reset, 3400);
+          return;
+        }
+        const line = script[lineIdx];
+        if (charIdx === 0) {
+          currentEl = document.createElement("span");
+          currentEl.className = line.cls;
+          currentEl.style.display = "block";
+          container.appendChild(currentEl);
+        }
+        currentEl.textContent += line.text[charIdx];
+        charIdx++;
+        if (charIdx >= line.text.length) {
+          lineIdx++;
+          charIdx = 0;
+          setTimeout(typeNext, lineIdx >= script.length ? 0 : 90);
+        } else {
+          setTimeout(typeNext, line.cls === "tl-prompt" ? 52 : 16);
+        }
+      }
+
+      function reset() {
+        container.innerHTML = "";
+        lineIdx = 0;
+        charIdx = 0;
+        currentEl = null;
+        typeNext();
+      }
+
+      /* start when hero terminal scrolls into view */
+      const termEl = document.querySelector(".terminal");
+      if (termEl) {
+        const termObserver = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              typeNext();
+              termObserver.disconnect();
+            }
+          },
+          { threshold: 0.15 },
+        );
+        termObserver.observe(termEl);
+        /* fallback — start directly if already visible */
+        if (termEl.getBoundingClientRect().top < window.innerHeight) {
+          termObserver.disconnect();
+          typeNext();
+        }
+      }
+
+      /* ── copy buttons ────────────────────────────────────────────── */
+      document.querySelectorAll(".copy-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const text = (btn.dataset.code || "").replace(/&#10;/g, "\n");
+          navigator.clipboard.writeText(text).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = "Copied!";
+            btn.classList.add("copied");
+            setTimeout(() => {
+              btn.textContent = orig;
+              btn.classList.remove("copied");
+            }, 2000);
+          });
+        });
+      });
+
+      /* ── mobile nav ──────────────────────────────────────────────── */
+      const toggle = document.getElementById("nav-toggle");
+      const links = document.getElementById("nav-links");
+      toggle.addEventListener("click", () => links.classList.toggle("open"));
+      links
+        .querySelectorAll("a")
+        .forEach((a) =>
+          a.addEventListener("click", () => links.classList.remove("open")),
+        );
+    </script>
+  </body>
 </html>
