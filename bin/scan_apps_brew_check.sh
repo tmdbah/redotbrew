@@ -1,16 +1,74 @@
 #!/bin/bash
-# filepath: /Users/tmdbah/scan_apps_brew_check.sh
+# re.Brew — Scan installed macOS apps and CLI tools, classify install sources,
+# and check Homebrew availability to support Brewfile migration.
+# https://github.com/tmdbah/redotbrew
 
 set -u
 shopt -s nullglob
 
-OUTPUT_CSV="$HOME/Downloads/installed_apps_audit.csv"
-OUTPUT_HTML="$HOME/Downloads/installed_apps_audit.html"
+# --- Defaults ---
+OUTPUT_DIR="$HOME/Downloads"
+VERSION_TIMEOUT_SECONDS=1
+PROGRESS_EVERY=25
+EXTRA_CMD_DIRS=()
+MAX_VERSION_JOBS=8
+
+# --- Parse arguments ---
+show_help() {
+    cat <<EOF
+re.Brew — Installed Apps Audit
+Usage: $(basename "$0") [OPTIONS]
+
+Scan installed macOS applications and CLI tools. Generates a CSV and an
+interactive HTML dashboard showing install source, version, and Homebrew
+availability for each item.
+
+Options:
+  --output-dir DIR       Output directory for reports (default: ~/Downloads)
+  --version-timeout SECS Timeout for version detection per tool (default: 1)
+  --extra-paths DIRS     Additional colon-separated directories to scan for CLI tools
+                         (e.g. ~/.local/bin:/opt/local/bin)
+  --help, -h             Show this help message
+
+Outputs:
+  <output-dir>/installed_apps_audit.csv
+  <output-dir>/installed_apps_audit.html
+
+Prerequisites:
+  Homebrew    Required for availability checking (runs without it, but limited)
+  mas         Optional; enables Mac App Store app detection
+EOF
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --output-dir)
+            [[ -z "${2:-}" ]] && { echo "Error: --output-dir requires a value" >&2; exit 1; }
+            OUTPUT_DIR="$2"; shift 2 ;;
+        --version-timeout)
+            [[ -z "${2:-}" ]] && { echo "Error: --version-timeout requires a value" >&2; exit 1; }
+            VERSION_TIMEOUT_SECONDS="$2"; shift 2 ;;
+        --extra-paths)
+            [[ -z "${2:-}" ]] && { echo "Error: --extra-paths requires a value" >&2; exit 1; }
+            IFS=: read -ra _extra <<< "$2"
+            EXTRA_CMD_DIRS+=("${_extra[@]}")
+            shift 2 ;;
+        -h|--help) show_help ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+    esac
+done
+
+# --- Validate output directory ---
+if [[ ! -d "$OUTPUT_DIR" ]]; then
+    mkdir -p "$OUTPUT_DIR" 2>/dev/null || { echo "Error: Cannot create output directory: $OUTPUT_DIR" >&2; exit 1; }
+fi
+
+OUTPUT_CSV="$OUTPUT_DIR/installed_apps_audit.csv"
+OUTPUT_HTML="$OUTPUT_DIR/installed_apps_audit.html"
 echo "App/Tool Name,Install Source,Path/Command,Version,Homebrew Availability,Confidence,Install Evidence" > "$OUTPUT_CSV"
 
 rows_json=""
-VERSION_TIMEOUT_SECONDS=1
-PROGRESS_EVERY=25
 
 csv_escape() {
     local s="${1:-}"
@@ -126,7 +184,7 @@ write_html_dashboard() {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Installed Apps Audit Dashboard</title>
+    <title>re.Brew Dashboard</title>
     <style>
         :root {
             color-scheme: light dark;
@@ -290,8 +348,8 @@ write_html_dashboard() {
 </head>
 <body>
     <div class="wrap">
-        <h1>Installed Apps Audit Dashboard</h1>
-        <div class="sub">Generated from local scan data. Includes source detection, Homebrew availability, confidence, and migration insights.</div>
+        <h1>re.Brew Dashboard</h1>
+        <div class="sub">Your dotfiles, re-brewed. Scan data includes source detection, Homebrew availability, confidence, and migration insights.</div>
 
         <div class="grid" id="kpis"></div>
 
@@ -610,6 +668,19 @@ else
     mas_apps=""
 fi
 
+# --- Startup summary ---
+echo "=== re.Brew — Installed Apps Audit ==="
+echo "  Output dir:        $OUTPUT_DIR"
+echo "  Version timeout:   ${VERSION_TIMEOUT_SECONDS}s"
+printf '  Homebrew:          %s\n' "$(if [[ $has_brew -eq 1 ]]; then echo "found (catalog: $(if [[ $has_brew_catalog -eq 1 ]]; then echo "loaded"; else echo "unavailable"; fi))"; else echo "NOT FOUND — availability data will be limited"; fi)"
+printf '  mas (App Store):   %s\n' "$(if [[ -n "$mas_apps" ]]; then echo "found"; elif command -v mas >/dev/null 2>&1; then echo "installed but no apps listed"; else echo "not installed (Mac App Store detection skipped)"; fi)"
+cmd_scan_dirs=("/usr/local/bin" "/opt/homebrew/bin")
+for _d in "${EXTRA_CMD_DIRS[@]}"; do
+    [[ -d "$_d" ]] && cmd_scan_dirs+=("$_d")
+done
+printf '  Command scan dirs: %s\n' "${cmd_scan_dirs[*]}"
+echo ""
+
 app_dirs=(/Applications "$HOME/Applications")
 app_total=0
 app_processed=0
@@ -676,7 +747,7 @@ for dir in "${app_dirs[@]}"; do
     done
 done
 
-brew_bin_dirs=("/usr/local/bin" "/opt/homebrew/bin")
+brew_bin_dirs=("${cmd_scan_dirs[@]}")
 seen_cmds=""
 cmd_total=0
 cmd_processed=0
@@ -697,6 +768,39 @@ for bin_dir in "${brew_bin_dirs[@]}"; do
     done
 done
 
+# --- Pre-compute command versions in parallel ---
+VERSION_CACHE_DIR="$(mktemp -d)"
+trap 'rm -rf "$VERSION_CACHE_DIR"' EXIT
+
+_precomp_seen=""
+_batch=0
+for bin_dir in "${brew_bin_dirs[@]}"; do
+    [[ -d "$bin_dir" ]] || continue
+    for cmd in "$bin_dir"/*; do
+        [[ -x "$cmd" ]] || continue
+        cmd_name="$(basename "$cmd")"
+        if printf '%s\n' "$_precomp_seen" | grep -Fqx "$cmd_name"; then
+            continue
+        fi
+        _precomp_seen="${_precomp_seen}"$'\n'"$cmd_name"
+        (
+            v=""
+            for flag in --version -V; do
+                v="$(run_cmd_first_line_with_timeout "$VERSION_TIMEOUT_SECONDS" "$cmd" "$flag" || true)"
+                [[ -n "$v" ]] && break
+            done
+            printf '%s' "$v" > "$VERSION_CACHE_DIR/$cmd_name"
+        ) &
+        _batch=$((_batch + 1))
+        if (( _batch >= MAX_VERSION_JOBS )); then
+            wait
+            _batch=0
+        fi
+    done
+done
+wait
+echo "[Versions] Pre-computed $cmd_total command versions (parallel=$MAX_VERSION_JOBS)"
+
 log_progress "Commands" 0 "$cmd_total" "$cmd_start_ts"
 
 for bin_dir in "${brew_bin_dirs[@]}"; do
@@ -711,7 +815,8 @@ for bin_dir in "${brew_bin_dirs[@]}"; do
         fi
         seen_cmds="${seen_cmds}"$'\n'"$cmd_name"
 
-        version="$(get_cmd_version "$cmd")"
+        version=""
+        [[ -f "$VERSION_CACHE_DIR/$cmd_name" ]] && version="$(cat "$VERSION_CACHE_DIR/$cmd_name")"
         source="Manual / Other"
         brew_avail=""
         confidence="Low"
@@ -758,6 +863,6 @@ done
 
     write_html_dashboard
 
-    echo "✅ Scan complete!"
+    echo "✅ re.Brew scan complete!"
     echo "   CSV:  $OUTPUT_CSV"
     echo "   HTML: $OUTPUT_HTML"
