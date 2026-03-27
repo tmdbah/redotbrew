@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>re.Brew Dashboard — Sample</title>
+    <style>
+        :root {
+            --bg:      #0b1020;
+            --panel:   #121a2d;
+            --panel-2: #1a2540;
+            --text:    #e6edf7;
+            --muted:   #9fb0d0;
+            --accent:  #5aa8ff;
+            --ok:      #37b26c;
+            --warn:    #f0b429;
+            --bad:     #e45555;
+            --border:  #2a3658;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        h1 { font-size: 26px; margin-bottom: 4px; }
+        .sub { color: var(--muted); margin-bottom: 20px; font-size: 14px; }
+        .grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(5, minmax(150px, 1fr));
+            margin-bottom: 20px;
+        }
+        .card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .metric-label {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .metric-value { font-size: 28px; font-weight: 700; line-height: 1.1; }
+        .section-title { margin: 0 0 10px; font-size: 17px; font-weight: 600; }
+        .charts {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(2, 1fr);
+            margin-bottom: 20px;
+        }
+        .bar-row { margin-bottom: 10px; }
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin-bottom: 5px;
+            color: var(--muted);
+        }
+        .bar-track {
+            height: 12px;
+            border-radius: 999px;
+            background: var(--panel-2);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #9bd0ff);
+        }
+        .insights {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(3, 1fr);
+            margin-bottom: 20px;
+        }
+        .insight-title { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+        .insight-value { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .insight-desc { font-size: 12px; color: var(--muted); line-height: 1.4; }
+        .legend-list {
+            margin: 0;
+            padding-left: 18px;
+            color: var(--muted);
+            line-height: 1.7;
+            font-size: 13px;
+        }
+        .legend-list strong { color: var(--text); }
+        .filters { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        input, select {
+            background: var(--panel-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        input { min-width: 220px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 7px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: var(--panel-2);
+            color: var(--muted);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(90,168,255,0.07); }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            background: var(--panel-2);
+            color: var(--text);
+        }
+        .row-count { margin-top: 8px; color: var(--muted); font-size: 12px; }
+        @media (max-width: 800px) {
+            .grid, .charts, .insights { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>Installed Apps Audit Dashboard</h1>
+    <div class="sub">Generated from local scan data. Includes source detection, Homebrew availability, confidence, and migration insights.</div>
+
+    <div class="grid" id="kpis"></div>
+    <div class="insights" id="insights"></div>
+
+    <div class="charts">
+        <div class="card">
+            <h2 class="section-title">Install Source Distribution</h2>
+            <div id="sourceChart"></div>
+        </div>
+        <div class="card">
+            <h2 class="section-title">Confidence Distribution</h2>
+            <div id="confidenceChart"></div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+        <h2 class="section-title">Key / Definitions</h2>
+        <ul class="legend-list">
+            <li><strong>Manual but Homebrew available</strong>: Item appears manually installed but can be managed by Homebrew.</li>
+            <li><strong>Installed via Homebrew</strong>: Item directly matched as Homebrew Formula or Cask.</li>
+            <li><strong>Manual and not available in Homebrew</strong>: Item appears manually installed and no Homebrew match was found.</li>
+            <li><strong>Confidence</strong>: High = direct list match, Medium = inferred availability, Low = no direct mapping found.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Detailed Inventory</h2>
+        <div class="filters">
+            <input id="search" type="search" placeholder="Search name, source, path, version..." />
+            <select id="categoryFilter">
+                <option value="all">All insight categories</option>
+                <option value="manual_brew_available">Manual but Homebrew available</option>
+                <option value="installed_via_brew">Installed via Homebrew</option>
+                <option value="manual_not_brew_available">Manual and not available in Homebrew</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div style="overflow:auto;max-height:480px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Type</th><th>Install Source</th>
+                        <th>Path / Command</th><th>Version</th>
+                        <th>Homebrew Availability</th><th>Confidence</th>
+                        <th>Install Evidence</th><th>Insight Category</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+        <div class="row-count" id="rowCount"></div>
+    </div>
+</div>
+
+<script>
+const rows = [
+/* ── APPS: Homebrew Cask (4) ── */
+{"name":"1Password","source":"Homebrew Cask","path":"/Applications/1Password.app","version":"8.10.36","brewAvailability":"Homebrew Cask: 1password","confidence":"High","installEvidence":"Homebrew Cask install","itemType":"App"},
+{"name":"iTerm2","source":"Homebrew Cask","path":"/Applications/iTerm.app","version":"3.5.2","brewAvailability":"Homebrew Cask: iterm2","confidence":"High","installEvidence":"Homebrew Cask install","itemType":"App"},
+{"name":"Raycast","source":"Homebrew Cask","path":"/Applications/Raycast.app","version":"1.71.0","brewAvailability":"Homebrew Cask: raycast","confidence":"High","installEvidence":"Homebrew Cask install","itemType":"App"},
+{"name":"TablePlus","source":"Homebrew Cask","path":"/Applications/TablePlus.app","version":"5.9.2","brewAvailability":"Homebrew Cask: tableplus","confidence":"High","installEvidence":"Homebrew Cask install","itemType":"App"},
+/* ── APPS: Mac App Store (4) ── */
+{"name":"Amphetamine","source":"Mac App Store","path":"/Applications/Amphetamine.app","version":"5.3.3","brewAvailability":"Not available in Homebrew","confidence":"High","installEvidence":"Mac App Store","itemType":"App"},
+{"name":"Keynote","source":"Mac App Store","path":"/Applications/Keynote.app","version":"14.1","brewAvailability":"Not available in Homebrew","confidence":"Medium","installEvidence":"Mac App Store","itemType":"App"},
+{"name":"Lungo","source":"Mac App Store","path":"/Applications/Lungo.app","version":"4.2.0","brewAvailability":"Not available in Homebrew","confidence":"High","installEvidence":"Mac App Store","itemType":"App"},
+{"name":"Xcode","source":"Mac App Store","path":"/Applications/Xcode.app","version":"15.3","brewAvailability":"Not available in Homebrew","confidence":"High","installEvidence":"Mac App Store","itemType":"App"},
+/* ── APPS: Manual / Other — Homebrew available (15) ── */
+{"name":"AlDente","source":"Manual / Other","path":"/Applications/AlDente.app","version":"1.37","brewAvailability":"Available as Cask: aldente","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Anki","source":"Manual / Other","path":"/Applications/Anki.app","version":"25.07.5","brewAvailability":"Available as Cask: anki","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Arc","source":"Manual / Other","path":"/Applications/Arc.app","version":"1.122.0","brewAvailability":"Available as Cask: arc","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Bear","source":"Manual / Other","path":"/Applications/Bear.app","version":"2.2.2","brewAvailability":"Available as Cask: bear","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"CleanMyMac","source":"Manual / Other","path":"/Applications/CleanMyMac.app","version":"5.1.0","brewAvailability":"Available as Cask: cleanmymac","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Dash","source":"Manual / Other","path":"/Applications/Dash.app","version":"7.2.0","brewAvailability":"Available as Cask: dash","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Docker Desktop","source":"Manual / Other","path":"/Applications/Docker.app","version":"4.28.0","brewAvailability":"Available as Cask: docker","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Figma","source":"Manual / Other","path":"/Applications/Figma.app","version":"116.14.4","brewAvailability":"Available as Cask: figma","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Firefox","source":"Manual / Other","path":"/Applications/Firefox.app","version":"122.0","brewAvailability":"Available as Cask: firefox","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"GIMP","source":"Manual / Other","path":"/Applications/GIMP-2.10.app","version":"2.10.36","brewAvailability":"Available as Cask: gimp","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Grammarly Desktop","source":"Manual / Other","path":"/Applications/Grammarly Desktop.app","version":"1.71.0","brewAvailability":"Available as Cask: grammarly-desktop","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"HandBrake","source":"Manual / Other","path":"/Applications/HandBrake.app","version":"1.7.3","brewAvailability":"Available as Cask: handbrake","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Linear","source":"Manual / Other","path":"/Applications/Linear.app","version":"1.10.0","brewAvailability":"Available as Cask: linear-linear","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Notion","source":"Manual / Other","path":"/Applications/Notion.app","version":"3.2.1","brewAvailability":"Available as Cask: notion","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Slack","source":"Manual / Other","path":"/Applications/Slack.app","version":"4.38.125","brewAvailability":"Available as Cask: slack","confidence":"Medium","installEvidence":"Found in /Applications","itemType":"App"},
+/* ── APPS: Manual / Other — NOT in Homebrew (24) ── */
+{"name":"AltTab","source":"Manual / Other","path":"/Applications/AltTab.app","version":"10.2.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Armoury Crate Gear","source":"Manual / Other","path":"/Applications/Armoury Crate Gear.app","version":"1.4.11","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Bartender 4","source":"Manual / Other","path":"/Applications/Bartender 4.app","version":"4.2.44","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Codepoint","source":"Manual / Other","path":"/Applications/Codepoint.app","version":"1.8.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Craft","source":"Manual / Other","path":"/Applications/Craft.app","version":"2.7.7","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Creative Cloud","source":"Manual / Other","path":"/Applications/Adobe Creative Cloud/Creative Cloud.app","version":"6.4.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"DaVinci Resolve","source":"Manual / Other","path":"/Applications/DaVinci Resolve.app","version":"18.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Dato","source":"Manual / Other","path":"/Applications/Dato.app","version":"4.5.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Dropzone 4","source":"Manual / Other","path":"/Applications/Dropzone 4.app","version":"4.3.3","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Fantastical","source":"Manual / Other","path":"/Applications/Fantastical.app","version":"3.8.9","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Franz","source":"Manual / Other","path":"/Applications/Franz.app","version":"5.11.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Gemini 2","source":"Manual / Other","path":"/Applications/Gemini 2.app","version":"2.9.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"GoodLinks","source":"Manual / Other","path":"/Applications/GoodLinks.app","version":"1.3.5","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"HiDock","source":"Manual / Other","path":"/Applications/HiDock.app","version":"1.2.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Home","source":"Manual / Other","path":"/Applications/Home.app","version":"5.1.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Kap","source":"Manual / Other","path":"/Applications/Kap.app","version":"3.6.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Klack","source":"Manual / Other","path":"/Applications/Klack.app","version":"1.3.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Lasso","source":"Manual / Other","path":"/Applications/Lasso.app","version":"3.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Mela","source":"Manual / Other","path":"/Applications/Mela.app","version":"3.5.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"MusicBox","source":"Manual / Other","path":"/Applications/MusicBox.app","version":"3.2.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Overflow 3","source":"Manual / Other","path":"/Applications/Overflow 3.app","version":"3.3.4","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"PopClip","source":"Manual / Other","path":"/Applications/PopClip.app","version":"2024.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"SteadyTune","source":"Manual / Other","path":"/Applications/SteadyTune.app","version":"1.3.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+{"name":"Tot","source":"Manual / Other","path":"/Applications/Tot.app","version":"1.7.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"Found in /Applications","itemType":"App"},
+/* ── COMMANDS: Homebrew Formula (9) ── */
+{"name":"fzf","source":"Homebrew Formula","path":"/usr/local/bin/fzf","version":"0.48.1","brewAvailability":"Homebrew Formula: fzf","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"gh","source":"Homebrew Formula","path":"/usr/local/bin/gh","version":"2.44.1","brewAvailability":"Homebrew Formula: gh","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"git","source":"Homebrew Formula","path":"/usr/local/bin/git","version":"2.43.0","brewAvailability":"Homebrew Formula: git","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"jq","source":"Homebrew Formula","path":"/usr/local/bin/jq","version":"1.7.1","brewAvailability":"Homebrew Formula: jq","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"mas","source":"Homebrew Formula","path":"/usr/local/bin/mas","version":"1.8.7","brewAvailability":"Homebrew Formula: mas","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"node","source":"Homebrew Formula","path":"/usr/local/bin/node","version":"20.11.0","brewAvailability":"Homebrew Formula: node","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"python3","source":"Homebrew Formula","path":"/usr/local/bin/python3","version":"3.12.2","brewAvailability":"Homebrew Formula: python@3.12","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"rg","source":"Homebrew Formula","path":"/usr/local/bin/rg","version":"14.1.0","brewAvailability":"Homebrew Formula: ripgrep","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+{"name":"stow","source":"Homebrew Formula","path":"/usr/local/bin/stow","version":"2.3.1","brewAvailability":"Homebrew Formula: stow","confidence":"High","installEvidence":"Homebrew Formula install","itemType":"Command"},
+/* ── COMMANDS: Manual / Other — Homebrew available (11) ── */
+{"name":"aws","source":"Manual / Other","path":"/usr/local/bin/aws","version":"2.15.18","brewAvailability":"Available as Formula: awscli","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"bat","source":"Manual / Other","path":"/usr/local/bin/bat","version":"0.24.0","brewAvailability":"Available as Formula: bat","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"curl","source":"Manual / Other","path":"/usr/bin/curl","version":"8.4.0","brewAvailability":"Available as Formula: curl","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"docker","source":"Manual / Other","path":"/usr/local/bin/docker","version":"25.0.3","brewAvailability":"Available as Formula: docker","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"fd","source":"Manual / Other","path":"/usr/local/bin/fd","version":"9.0.0","brewAvailability":"Available as Formula: fd","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ffmpeg","source":"Manual / Other","path":"/usr/local/bin/ffmpeg","version":"6.1.1","brewAvailability":"Available as Formula: ffmpeg","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"htop","source":"Manual / Other","path":"/usr/bin/htop","version":"3.3.0","brewAvailability":"Available as Formula: htop","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"make","source":"Manual / Other","path":"/usr/bin/make","version":"3.81","brewAvailability":"Available as Formula: make","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nvim","source":"Manual / Other","path":"/usr/local/bin/nvim","version":"0.9.5","brewAvailability":"Available as Formula: neovim","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tmux","source":"Manual / Other","path":"/usr/local/bin/tmux","version":"3.4","brewAvailability":"Available as Formula: tmux","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+{"name":"wget","source":"Manual / Other","path":"/usr/local/bin/wget","version":"1.21.4","brewAvailability":"Available as Formula: wget","confidence":"Medium","installEvidence":"In PATH","itemType":"Command"},
+/* ── COMMANDS: Manual / Other — NOT in Homebrew (164) ── */
+{"name":"awk","source":"Manual / Other","path":"/usr/bin/awk","version":"20200816","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"basename","source":"Manual / Other","path":"/usr/bin/basename","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"bash","source":"Manual / Other","path":"/bin/bash","version":"3.2.57(1)-release","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"bc","source":"Manual / Other","path":"/usr/bin/bc","version":"1.07.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"bzip2","source":"Manual / Other","path":"/usr/bin/bzip2","version":"1.0.8","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"caffeinate","source":"Manual / Other","path":"/usr/bin/caffeinate","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cal","source":"Manual / Other","path":"/usr/bin/cal","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cargo","source":"Manual / Other","path":"/usr/local/bin/cargo","version":"1.76.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cat","source":"Manual / Other","path":"/bin/cat","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cc","source":"Manual / Other","path":"/usr/bin/cc","version":"15.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"chflags","source":"Manual / Other","path":"/usr/bin/chflags","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"chmod","source":"Manual / Other","path":"/bin/chmod","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"chown","source":"Manual / Other","path":"/usr/sbin/chown","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"chsh","source":"Manual / Other","path":"/usr/bin/chsh","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cksum","source":"Manual / Other","path":"/usr/bin/cksum","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"clang","source":"Manual / Other","path":"/usr/bin/clang","version":"15.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"clang++","source":"Manual / Other","path":"/usr/bin/clang++","version":"15.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cmp","source":"Manual / Other","path":"/usr/bin/cmp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"code","source":"Manual / Other","path":"/usr/local/bin/code","version":"1.86.2","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"codesign","source":"Manual / Other","path":"/usr/bin/codesign","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"conda","source":"Manual / Other","path":"/usr/local/anaconda3/bin/conda","version":"23.11.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cp","source":"Manual / Other","path":"/bin/cp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"cut","source":"Manual / Other","path":"/usr/bin/cut","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"dart","source":"Manual / Other","path":"/usr/local/flutter/bin/dart","version":"3.2.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"date","source":"Manual / Other","path":"/bin/date","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"dd","source":"Manual / Other","path":"/bin/dd","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"df","source":"Manual / Other","path":"/bin/df","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"diff","source":"Manual / Other","path":"/usr/bin/diff","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"dirname","source":"Manual / Other","path":"/usr/bin/dirname","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"diskutil","source":"Manual / Other","path":"/usr/sbin/diskutil","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ditto","source":"Manual / Other","path":"/usr/bin/ditto","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"dscacheutil","source":"Manual / Other","path":"/usr/sbin/dscacheutil","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"dscl","source":"Manual / Other","path":"/usr/bin/dscl","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"du","source":"Manual / Other","path":"/usr/bin/du","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"echo","source":"Manual / Other","path":"/bin/echo","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"env","source":"Manual / Other","path":"/usr/bin/env","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"expr","source":"Manual / Other","path":"/bin/expr","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"file","source":"Manual / Other","path":"/usr/bin/file","version":"5.45","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"find","source":"Manual / Other","path":"/usr/bin/find","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"flutter","source":"Manual / Other","path":"/usr/local/flutter/bin/flutter","version":"3.16.9","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"fold","source":"Manual / Other","path":"/usr/bin/fold","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"gcc","source":"Manual / Other","path":"/usr/bin/gcc","version":"15.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"gem","source":"Manual / Other","path":"/usr/bin/gem","version":"3.4.22","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"getconf","source":"Manual / Other","path":"/usr/bin/getconf","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"go","source":"Manual / Other","path":"/usr/local/go/bin/go","version":"1.22.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"gofmt","source":"Manual / Other","path":"/usr/local/go/bin/gofmt","version":"1.22.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"grep","source":"Manual / Other","path":"/usr/bin/grep","version":"2.6.0-FreeBSD","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"gzip","source":"Manual / Other","path":"/usr/bin/gzip","version":"464.50.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"head","source":"Manual / Other","path":"/usr/bin/head","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"hostname","source":"Manual / Other","path":"/bin/hostname","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"iconv","source":"Manual / Other","path":"/usr/bin/iconv","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"id","source":"Manual / Other","path":"/usr/bin/id","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ifconfig","source":"Manual / Other","path":"/sbin/ifconfig","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"indent","source":"Manual / Other","path":"/usr/bin/indent","version":"2.2.13","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"install","source":"Manual / Other","path":"/usr/bin/install","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"java","source":"Manual / Other","path":"/usr/bin/java","version":"21.0.2","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"javac","source":"Manual / Other","path":"/usr/bin/javac","version":"21.0.2","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"join","source":"Manual / Other","path":"/usr/bin/join","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"kill","source":"Manual / Other","path":"/bin/kill","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ksh","source":"Manual / Other","path":"/bin/ksh","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"launchctl","source":"Manual / Other","path":"/bin/launchctl","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"less","source":"Manual / Other","path":"/usr/bin/less","version":"608","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"lex","source":"Manual / Other","path":"/usr/bin/lex","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"lldb","source":"Manual / Other","path":"/usr/bin/lldb","version":"1500.0.404.7","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ln","source":"Manual / Other","path":"/bin/ln","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"locale","source":"Manual / Other","path":"/usr/bin/locale","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"logger","source":"Manual / Other","path":"/usr/bin/logger","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"logname","source":"Manual / Other","path":"/usr/bin/logname","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"lp","source":"Manual / Other","path":"/usr/bin/lp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ls","source":"Manual / Other","path":"/bin/ls","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"m4","source":"Manual / Other","path":"/usr/bin/m4","version":"1.4.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"man","source":"Manual / Other","path":"/usr/bin/man","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"md5","source":"Manual / Other","path":"/sbin/md5","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"mdfind","source":"Manual / Other","path":"/usr/bin/mdfind","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"mdls","source":"Manual / Other","path":"/usr/bin/mdls","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"mkdir","source":"Manual / Other","path":"/bin/mkdir","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"mktemp","source":"Manual / Other","path":"/usr/bin/mktemp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"more","source":"Manual / Other","path":"/usr/bin/more","version":"608","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"mv","source":"Manual / Other","path":"/bin/mv","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nano","source":"Manual / Other","path":"/usr/bin/nano","version":"7.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"newgrp","source":"Manual / Other","path":"/usr/bin/newgrp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nice","source":"Manual / Other","path":"/usr/bin/nice","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nl","source":"Manual / Other","path":"/usr/bin/nl","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nm","source":"Manual / Other","path":"/usr/bin/nm","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"nohup","source":"Manual / Other","path":"/usr/bin/nohup","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"od","source":"Manual / Other","path":"/usr/bin/od","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"open","source":"Manual / Other","path":"/usr/bin/open","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"osascript","source":"Manual / Other","path":"/usr/bin/osascript","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"passwd","source":"Manual / Other","path":"/usr/bin/passwd","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"patch","source":"Manual / Other","path":"/usr/bin/patch","version":"2.7.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pax","source":"Manual / Other","path":"/bin/pax","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pbcopy","source":"Manual / Other","path":"/usr/bin/pbcopy","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pbpaste","source":"Manual / Other","path":"/usr/bin/pbpaste","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pgrep","source":"Manual / Other","path":"/usr/bin/pgrep","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ping","source":"Manual / Other","path":"/sbin/ping","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pip3","source":"Manual / Other","path":"/usr/bin/pip3","version":"23.2.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pkgutil","source":"Manual / Other","path":"/usr/sbin/pkgutil","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"plutil","source":"Manual / Other","path":"/usr/bin/plutil","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pod","source":"Manual / Other","path":"/usr/local/bin/pod","version":"1.15.2","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pr","source":"Manual / Other","path":"/usr/bin/pr","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"printf","source":"Manual / Other","path":"/usr/bin/printf","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ps","source":"Manual / Other","path":"/bin/ps","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"pwd","source":"Manual / Other","path":"/bin/pwd","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"python","source":"Manual / Other","path":"/usr/bin/python3","version":"3.9.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"python3.9","source":"Manual / Other","path":"/usr/bin/python3.9","version":"3.9.6","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"renice","source":"Manual / Other","path":"/usr/bin/renice","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"rm","source":"Manual / Other","path":"/bin/rm","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"rmdir","source":"Manual / Other","path":"/bin/rmdir","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"route","source":"Manual / Other","path":"/sbin/route","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"rsync","source":"Manual / Other","path":"/usr/bin/rsync","version":"2.6.9","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ruby","source":"Manual / Other","path":"/usr/bin/ruby","version":"2.6.10","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"rustc","source":"Manual / Other","path":"/usr/local/bin/rustc","version":"1.76.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"rustup","source":"Manual / Other","path":"/usr/local/bin/rustup","version":"1.27.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"say","source":"Manual / Other","path":"/usr/bin/say","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"scp","source":"Manual / Other","path":"/usr/bin/scp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"security","source":"Manual / Other","path":"/usr/bin/security","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sed","source":"Manual / Other","path":"/usr/bin/sed","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"seq","source":"Manual / Other","path":"/usr/bin/seq","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sftp","source":"Manual / Other","path":"/usr/bin/sftp","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sh","source":"Manual / Other","path":"/bin/sh","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sleep","source":"Manual / Other","path":"/bin/sleep","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"softwareupdate","source":"Manual / Other","path":"/usr/sbin/softwareupdate","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sort","source":"Manual / Other","path":"/usr/bin/sort","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"split","source":"Manual / Other","path":"/usr/bin/split","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"ssh","source":"Manual / Other","path":"/usr/bin/ssh","version":"OpenSSH_9.4p1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"stat","source":"Manual / Other","path":"/usr/bin/stat","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"strings","source":"Manual / Other","path":"/usr/bin/strings","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"strip","source":"Manual / Other","path":"/usr/bin/strip","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sudo","source":"Manual / Other","path":"/usr/bin/sudo","version":"1.9.15p5","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sw_vers","source":"Manual / Other","path":"/usr/bin/sw_vers","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"swift","source":"Manual / Other","path":"/usr/bin/swift","version":"5.10","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"swiftc","source":"Manual / Other","path":"/usr/bin/swiftc","version":"5.10","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"sysctl","source":"Manual / Other","path":"/usr/sbin/sysctl","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tail","source":"Manual / Other","path":"/usr/bin/tail","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tar","source":"Manual / Other","path":"/usr/bin/tar","version":"bsdtar 3.5.3","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tee","source":"Manual / Other","path":"/usr/bin/tee","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"test","source":"Manual / Other","path":"/usr/bin/test","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"time","source":"Manual / Other","path":"/usr/bin/time","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"touch","source":"Manual / Other","path":"/usr/bin/touch","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tr","source":"Manual / Other","path":"/usr/bin/tr","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"true","source":"Manual / Other","path":"/usr/bin/true","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tsort","source":"Manual / Other","path":"/usr/bin/tsort","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"tty","source":"Manual / Other","path":"/usr/bin/tty","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"uname","source":"Manual / Other","path":"/usr/bin/uname","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"unexpand","source":"Manual / Other","path":"/usr/bin/unexpand","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"uniq","source":"Manual / Other","path":"/usr/bin/uniq","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"unlink","source":"Manual / Other","path":"/usr/bin/unlink","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"unzip","source":"Manual / Other","path":"/usr/bin/unzip","version":"6.00","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"uptime","source":"Manual / Other","path":"/usr/bin/uptime","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"users","source":"Manual / Other","path":"/usr/bin/users","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"vi","source":"Manual / Other","path":"/usr/bin/vi","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"vim","source":"Manual / Other","path":"/usr/bin/vim","version":"9.0.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"wall","source":"Manual / Other","path":"/usr/bin/wall","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"wc","source":"Manual / Other","path":"/usr/bin/wc","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"who","source":"Manual / Other","path":"/usr/bin/who","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"whoami","source":"Manual / Other","path":"/usr/bin/whoami","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"xargs","source":"Manual / Other","path":"/usr/bin/xargs","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"xcode-select","source":"Manual / Other","path":"/usr/bin/xcode-select","version":"2395","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"xcodebuild","source":"Manual / Other","path":"/usr/bin/xcodebuild","version":"15400.0.38.1","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"xcrun","source":"Manual / Other","path":"/usr/bin/xcrun","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"xip","source":"Manual / Other","path":"/usr/bin/xip","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"yacc","source":"Manual / Other","path":"/usr/bin/yacc","version":"","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"zip","source":"Manual / Other","path":"/usr/bin/zip","version":"3.0","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"},
+{"name":"zsh","source":"Manual / Other","path":"/bin/zsh","version":"5.9","brewAvailability":"Not available in Homebrew","confidence":"Low","installEvidence":"In PATH","itemType":"Command"}
+];
+
+function classify(row) {
+    const src  = row.source || "";
+    const brew = row.brewAvailability || "";
+    if (src === "Homebrew Cask" || src === "Homebrew Formula") return "installed_via_brew";
+    if (src === "Manual / Other" && /^Available as (Cask|Formula): /.test(brew)) return "manual_brew_available";
+    if (src === "Manual / Other" && brew === "Not available in Homebrew") return "manual_not_brew_available";
+    return "other";
+}
+
+function humanCategory(c) {
+    if (c === "manual_brew_available")    return "Manual but Homebrew available";
+    if (c === "installed_via_brew")       return "Installed via Homebrew";
+    if (c === "manual_not_brew_available")return "Manual and not available in Homebrew";
+    return "Other";
+}
+
+function countBy(items, fn) {
+    const m = new Map();
+    items.forEach(i => { const k = fn(i); m.set(k, (m.get(k) || 0) + 1); });
+    return m;
+}
+
+function pct(v, t) {
+    return t ? ((v / t) * 100).toFixed(1) + "%" : "0.0%";
+}
+
+function renderBarChart(id, map, total) {
+    const el = document.getElementById(id);
+    el.innerHTML = "";
+    [...map.entries()].sort((a,b) => b[1]-a[1]).forEach(([label, value]) => {
+        const d = document.createElement("div");
+        d.className = "bar-row";
+        d.innerHTML = `<div class="bar-label"><span>${label}</span><span>${value} (${pct(value,total)})</span></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.max(3,(value/Math.max(1,total))*100)}%"></div></div>`;
+        el.appendChild(d);
+    });
+}
+
+function renderKPIs(all) {
+    const total = all.length;
+    const apps  = all.filter(r => r.itemType === "App").length;
+    const cmds  = all.filter(r => r.itemType === "Command").length;
+    const mba   = all.filter(r => classify(r) === "manual_brew_available").length;
+    const vbrew = all.filter(r => classify(r) === "installed_via_brew").length;
+    document.getElementById("kpis").innerHTML = [
+        ["Total Items", total],["Apps", apps],["Commands", cmds],
+        ["Manual + Brew Available", mba],["Installed via Homebrew", vbrew]
+    ].map(([l,v]) => `<div class="card"><div class="metric-label">${l}</div><div class="metric-value">${v}</div></div>`).join("");
+}
+
+function renderInsights(all) {
+    const total = all.length;
+    const mba   = all.filter(r => classify(r) === "manual_brew_available").length;
+    const vbrew = all.filter(r => classify(r) === "installed_via_brew").length;
+    const mnb   = all.filter(r => classify(r) === "manual_not_brew_available").length;
+    document.getElementById("insights").innerHTML = [
+        {title:"Manual but Homebrew available",    value:`${mba} (${pct(mba,total)})`,   desc:"These are strong candidates to migrate into Homebrew for easier upgrades and reproducible setup."},
+        {title:"Installed via Homebrew",           value:`${vbrew} (${pct(vbrew,total)})`, desc:"Already centrally managed through Homebrew. These are typically easiest to keep updated."},
+        {title:"Manual and not available in Homebrew", value:`${mnb} (${pct(mnb,total)})`, desc:"Likely requires manual install/updates or an alternative package manager."}
+    ].map(i => `<div class="card"><div class="insight-title">${i.title}</div><div class="insight-value">${i.value}</div><div class="insight-desc">${i.desc}</div></div>`).join("");
+}
+
+function renderTable(all) {
+    const search = document.getElementById("search");
+    const filter = document.getElementById("categoryFilter");
+    const body   = document.getElementById("tableBody");
+    const count  = document.getElementById("rowCount");
+
+    function draw() {
+        const q   = (search.value || "").toLowerCase().trim();
+        const cat = filter.value;
+        const filtered = all.filter(r => {
+            const c  = classify(r);
+            const ok = cat === "all" || c === cat;
+            if (!ok) return false;
+            if (!q)  return true;
+            return [r.name,r.itemType,r.source,r.path,r.version,r.brewAvailability,r.confidence,r.installEvidence,humanCategory(c)]
+                .join(" ").toLowerCase().includes(q);
+        });
+        body.innerHTML = filtered.map(r => {
+            const c = classify(r);
+            return `<tr>
+                <td>${r.name||""}</td>
+                <td><span class="badge">${r.itemType||""}</span></td>
+                <td>${r.source||""}</td>
+                <td style="font-size:12px;color:#9fb0d0;">${r.path||""}</td>
+                <td>${r.version||""}</td>
+                <td>${r.brewAvailability||""}</td>
+                <td>${r.confidence||""}</td>
+                <td>${r.installEvidence||""}</td>
+                <td>${humanCategory(c)}</td>
+            </tr>`;
+        }).join("");
+        count.textContent = `${filtered.length} of ${all.length} rows shown`;
+    }
+
+    search.addEventListener("input", draw);
+    filter.addEventListener("change", draw);
+    draw();
+}
+
+(function main() {
+    renderKPIs(rows);
+    renderInsights(rows);
+    renderBarChart("sourceChart",     countBy(rows, r => r.source||"Unknown"),     rows.length);
+    renderBarChart("confidenceChart", countBy(rows, r => r.confidence||"Unknown"), rows.length);
+    renderTable(rows);
+})();
+</script>
+</body>
+</html>
