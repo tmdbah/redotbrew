@@ -339,9 +339,59 @@ write_html_dashboard() {
         .insight-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
         .insight-desc { font-size: 13px; color: var(--muted); line-height: 1.4; }
         .row-count { margin-top: 8px; color: var(--muted); font-size: 13px; }
+        .about-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+        }
+        .about-card h2 {
+            margin: 0 0 6px;
+            font-size: 18px;
+        }
+        .about-lead {
+            color: var(--muted);
+            font-size: 14px;
+            margin: 0 0 14px;
+            line-height: 1.5;
+        }
+        .about-features {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(2, minmax(240px, 1fr));
+            margin-bottom: 14px;
+        }
+        .about-feature {
+            background: var(--panel-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+        }
+        .about-feature-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .about-feature-desc {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+        .about-footer {
+            font-size: 13px;
+            color: var(--muted);
+        }
+        .about-footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        .about-footer a:hover {
+            text-decoration: underline;
+        }
 
         @media (max-width: 900px) {
-            .grid, .charts, .insights { grid-template-columns: 1fr; }
+            .grid, .charts, .insights, .about-features { grid-template-columns: 1fr; }
             input { min-width: 100%; }
         }
     </style>
@@ -350,6 +400,36 @@ write_html_dashboard() {
     <div class="wrap">
         <h1>re.Brew Dashboard</h1>
         <div class="sub">Your dotfiles, re-brewed. Scan data includes source detection, Homebrew availability, confidence, and migration insights.</div>
+
+        <div class="about-card">
+            <h2>About re.Brew</h2>
+            <p class="about-lead">
+                Audit, migrate, and automate your Mac setup through Homebrew. re.Brew scans what you have,
+                shows what can be managed by brew, and syncs your configs across machines via Git.
+            </p>
+            <div class="about-features">
+                <div class="about-feature">
+                    <div class="about-feature-title">🍺 Brewfile Management</div>
+                    <div class="about-feature-desc">Declare all your Homebrew packages and casks in a single Brewfile and reproduce your setup on any Mac with one command.</div>
+                </div>
+                <div class="about-feature">
+                    <div class="about-feature-title">🔗 Dotfiles via GNU Stow</div>
+                    <div class="about-feature-desc">Symlink config packages (zsh, git, vscode, ssh…) from this repo into $HOME so your settings are version-controlled and portable.</div>
+                </div>
+                <div class="about-feature">
+                    <div class="about-feature-title">🔍 Installed Apps Audit</div>
+                    <div class="about-feature-desc">Scan macOS apps and CLI tools, classify each by install source, and identify candidates to add to your Brewfile for full automation.</div>
+                </div>
+                <div class="about-feature">
+                    <div class="about-feature-title">⚡ Bootstrap Script</div>
+                    <div class="about-feature-desc">Run <code>./bootstrap.sh</code> to install Homebrew, apply your Brewfile, symlink dotfiles, and set up Node LTS — all in one step.</div>
+                </div>
+            </div>
+            <div class="about-footer">
+                <a href="https://github.com/tmdbah/redotbrew" target="_blank" rel="noopener">github.com/tmdbah/redotbrew</a>
+                &nbsp;·&nbsp; <em>Your dotfiles, re-brewed.</em>
+            </div>
+        </div>
 
         <div class="grid" id="kpis"></div>
 
