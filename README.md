@@ -139,6 +139,16 @@ open ~/Downloads/installed_apps_audit.html
 
 ---
 
+## Acknowledgments
+
+**redotbrew** is built on the shoulders of two exceptional open-source tools:
+
+- **[Homebrew](https://brew.sh)** — the Missing Package Manager for macOS. re.Brew's entire Brewfile-driven workflow, app audit, and reproducible setup story would not be possible without Homebrew and its vast formula/cask ecosystem. Huge thanks to the Homebrew maintainers and community.
+
+- **[GNU Stow](https://www.gnu.org/software/stow/)** — the elegant symlink farm manager. The `stow_all.sh` script and all dotfile management in re.Brew are powered by GNU Stow. Its simple, reliable approach to symlinking config packages is what makes version-controlled dotfiles so portable. Thanks to the GNU Stow maintainers for such an indispensable utility.
+
+---
+
 **redotbrew** — _re.Brew_ | Your dotfiles, re-brewed.
 
 Feel free to modify these files to suit your workflow.

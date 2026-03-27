@@ -602,6 +602,22 @@
       .homage-text a:hover {
         text-decoration: underline;
       }
+      /* stow variant — accent-blue tint */
+      .homage-stow {
+        border-top: 1px solid rgba(90, 174, 255, 0.12);
+        border-bottom: 1px solid rgba(90, 174, 255, 0.12);
+        background: linear-gradient(
+          135deg,
+          rgba(90, 174, 255, 0.05) 0%,
+          transparent 60%
+        );
+      }
+      .homage-stow .homage-text h3 {
+        color: var(--accent);
+      }
+      .homage-stow .homage-text a {
+        color: var(--accent);
+      }
 
       /* ── footer ────────────────────────────────────────────────── */
       .footer {
@@ -1020,6 +1036,29 @@ cd ~/redotbrew</code></pre>
       </div>
     </section>
 
+    <!-- ── HOMAGE TO GNU STOW ─────────────────────────────────────────── -->
+    <section class="homage homage-stow">
+      <div class="container homage-inner">
+        <div class="homage-icon" aria-hidden="true">🔗</div>
+        <div class="homage-text">
+          <h3>Powered by GNU Stow</h3>
+          <p>
+            Dotfile management in re.Brew is powered by
+            <a
+              href="https://www.gnu.org/software/stow/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >GNU Stow</a
+            >
+            — the elegant symlink farm manager. Stow makes it possible to
+            version-control your configs and reproduce them on any machine with a
+            single command. Sincere thanks to the GNU Stow maintainers for such
+            a simple and reliable tool.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- ── FOOTER ────────────────────────────────────────────────────── -->
     <footer class="footer">
       <div class="container footer-inner">
@@ -1043,12 +1082,25 @@ cd ~/redotbrew</code></pre>
           <a href="https://brew.sh" target="_blank" rel="noopener noreferrer"
             >Homebrew</a
           >
+          <a
+            href="https://www.gnu.org/software/stow/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GNU Stow</a
+          >
         </nav>
         <span class="macos-badge">macOS only</span>
         <p class="footer-copy">
           MIT License &middot; Powered by
           <a href="https://brew.sh" target="_blank" rel="noopener noreferrer"
             >Homebrew</a
+          >
+          &amp;
+          <a
+            href="https://www.gnu.org/software/stow/"
+            target="_blank"
+            rel="noopener noreferrer"
+            >GNU Stow</a
           >
         </p>
       </div>
