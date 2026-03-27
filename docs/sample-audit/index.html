@@ -462,7 +462,7 @@ function countBy(items, fn) {
 }
 
 function pct(v, t) {
-    return t ? ((v / t) * 100).toFixed(1) + "%" : "0.0%";
+    return t !== 0 && t ? ((v / t) * 100).toFixed(1) + "%" : "0.0%";
 }
 
 function renderBarChart(id, map, total) {

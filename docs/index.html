@@ -643,12 +643,15 @@ function reset() {
 /* start when hero terminal scrolls into view */
 const termEl = document.querySelector(".terminal");
 if (termEl) {
-  new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) { typeNext(); entries[0].target._obs.disconnect(); }
-  }, {threshold:.15}).observe(termEl);
-  termEl._obs = termEl;
+  const termObserver = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) { typeNext(); termObserver.disconnect(); }
+  }, {threshold:.15});
+  termObserver.observe(termEl);
   /* fallback — start directly if already visible */
-  if (termEl.getBoundingClientRect().top < window.innerHeight) typeNext();
+  if (termEl.getBoundingClientRect().top < window.innerHeight) {
+    termObserver.disconnect();
+    typeNext();
+  }
 }
 
 /* ── copy buttons ────────────────────────────────────────────── */
