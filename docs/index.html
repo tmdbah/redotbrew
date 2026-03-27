@@ -317,7 +317,7 @@
         font-family: var(--mono);
         font-size: 13px;
         line-height: 1.8;
-        height: 252px;
+        height: 296px;
         overflow: hidden;
       }
       .tl-prompt {
@@ -742,6 +742,7 @@
         <ul class="nav-links" id="nav-links">
           <li><a href="#how-it-works">How it works</a></li>
           <li><a href="#features">Features</a></li>
+          <li><a href="#cli">CLI</a></li>
           <li><a href="#dashboard">Dashboard</a></li>
           <li><a href="#quickstart">Quick&nbsp;Start</a></li>
           <li>
@@ -821,8 +822,8 @@
             <h3>Bootstrap</h3>
             <p>
               Run <code>./bootstrap.sh</code> on any fresh Mac. It installs
-              Homebrew, your Brewfile, dotfiles via Stow, and nvm + Node LTS —
-              in a single pass.
+              Homebrew, your Brewfile, dotfiles via Stow, nvm + Node LTS, and
+              the <code>rebrew</code> CLI — all in a single pass.
             </p>
           </div>
 
@@ -832,7 +833,7 @@
             <div class="step-num">2</div>
             <h3>Manage Dotfiles</h3>
             <p>
-              Use <code>./bin/stow_all.sh</code> to symlink Zsh, Git,
+              Use <code>rebrew stow</code> to symlink Zsh, Git,
               VS&nbsp;Code, and SSH configs from the repo into
               <code>$HOME</code>. Change once, synced everywhere.
             </p>
@@ -844,7 +845,7 @@
             <div class="step-num">3</div>
             <h3>Audit &amp; Migrate</h3>
             <p>
-              Run <code>./bin/scan_apps_brew_check.sh</code> to scan every app
+              Run <code>rebrew scan</code> to scan every app
               and CLI tool, check Homebrew coverage, and get an interactive HTML
               report.
             </p>
@@ -858,7 +859,7 @@
       <div class="container">
         <div class="section-heading">
           <h2>Everything you need</h2>
-          <p>Four focused tools. One cohesive Mac workflow.</p>
+          <p>One bootstrap, one CLI, four powerful commands.</p>
         </div>
         <div class="feature-grid">
           <div class="feature-card">
@@ -866,8 +867,9 @@
             <h3>bootstrap.sh</h3>
             <p>
               One-command Mac setup. Installs Homebrew, runs your Brewfile,
-              applies dotfiles, and bootstraps nvm + Node LTS. Prompts for your
-              Git identity — never committed to the repo.
+              applies dotfiles, bootstraps nvm + Node LTS, and installs the
+              <code>rebrew</code> CLI. Prompts for your Git identity — never
+              committed to the repo.
             </p>
             <div class="tags">
               <span class="tag">Idempotent</span>
@@ -878,7 +880,7 @@
 
           <div class="feature-card">
             <div class="feature-icon">🔗</div>
-            <h3>stow_all.sh</h3>
+            <h3>rebrew stow</h3>
             <p>
               Powered by GNU Stow. Symlinks your configs from the repo into
               <code>$HOME</code> — no copying, no drift. Use
@@ -894,7 +896,7 @@
 
           <div class="feature-card">
             <div class="feature-icon">📊</div>
-            <h3>App Audit Dashboard</h3>
+            <h3>rebrew scan</h3>
             <p>
               Scans <code>/Applications</code> and your full <code>$PATH</code>.
               Checks every item against the Homebrew catalog. Outputs a
@@ -909,31 +911,59 @@
           </div>
 
           <div class="feature-card">
-            <div class="feature-icon">🗂</div>
-            <h3>Brewfile</h3>
+            <div class="feature-icon">🔄</div>
+            <h3>rebrew sync</h3>
             <p>
-              A curated manifest of Homebrew formulas, casks, and 60+
-              VS&nbsp;Code extensions. Fully reproducible. Edit once, apply
-              everywhere with <code>brew bundle</code>.
+              Compares your currently installed Homebrew packages against the
+              Brewfile. Shows drift at a glance — additions, removals, and
+              mismatches. Use <code>--apply</code> to overwrite the Brewfile
+              with the current state.
             </p>
             <div class="tags">
-              <span class="tag">Formulas</span>
-              <span class="tag">Casks</span>
-              <span class="tag">VS Code</span>
+              <span class="tag">Drift detection</span>
+              <span class="tag">--apply</span>
+              <span class="tag">Brewfile</span>
             </div>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- ── CLI REFERENCE ─────────────────────────────────────────────── -->
+    <section class="section section-alt" id="cli">
+      <div class="container">
+        <div class="section-heading">
+          <h2>CLI Reference</h2>
+          <p>
+            The <code>rebrew</code> CLI is installed automatically by
+            <code>./bootstrap.sh</code>. All day-to-day tasks go through it.
+          </p>
+        </div>
+        <div class="code-block" style="max-width: 680px; margin: 0 auto">
+          <pre><code>rebrew bootstrap [--dry-run]   Full macOS setup (Homebrew, packages, dotfiles, Git, Node)
+rebrew scan [--output-dir DIR] Audit installed apps and check Homebrew availability
+rebrew stow [--dry-run] [pkg]  Apply dotfile symlinks via GNU Stow
+rebrew sync [--apply]          Compare installed packages against Brewfile
+rebrew help                    Show help
+rebrew version                 Print version</code></pre>
+          <button
+            class="copy-btn"
+            data-code="rebrew help"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- ── DASHBOARD PREVIEW ─────────────────────────────────────────── -->
-    <section class="section section-alt" id="dashboard">
+    <section class="section" id="dashboard">
       <div class="container">
         <div class="section-heading">
           <h2>See the audit dashboard live</h2>
           <p>
             The interactive HTML report generated by
-            <code>scan_apps_brew_check.sh</code> — sample data shown.
+            <code>rebrew scan</code> — sample data shown.
           </p>
         </div>
         <div class="browser">
@@ -957,7 +987,7 @@
         <p class="dashboard-note">
           Generate yours:
           <code
-            >./bin/scan_apps_brew_check.sh &amp;&amp; open
+            >rebrew scan &amp;&amp; open
             ~/Downloads/installed_apps_audit.html</code
           >
         </p>
@@ -969,7 +999,7 @@
       <div class="container">
         <div class="section-heading">
           <h2>Quick start</h2>
-          <p>Up and running in three steps.</p>
+          <p>Up and running in four steps.</p>
         </div>
         <div class="qs-steps">
           <div>
@@ -1001,6 +1031,21 @@ cd ~/redotbrew</code></pre>
             <div class="code-block">
               <pre><code>./bootstrap.sh</code></pre>
               <button class="copy-btn" data-code="./bootstrap.sh">Copy</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="qs-label">4 — Use the CLI</div>
+            <div class="code-block">
+              <pre><code>rebrew scan                # audit every installed app
+rebrew sync                # check Brewfile drift
+rebrew stow --dry-run      # preview dotfile symlinks</code></pre>
+              <button
+                class="copy-btn"
+                data-code="rebrew scan&#10;rebrew sync&#10;rebrew stow --dry-run"
+              >
+                Copy
+              </button>
             </div>
           </div>
         </div>
@@ -1116,6 +1161,8 @@ cd ~/redotbrew</code></pre>
         { cls: "tl-output", text: "  Installing 42 formulas and casks..." },
         { cls: "tl-step", text: "▶ Stowing dotfiles..." },
         { cls: "tl-output", text: "  zsh ✓  git ✓  vscode ✓  config ✓" },
+        { cls: "tl-step", text: "▶ Installing rebrew CLI..." },
+        { cls: "tl-output", text: "  ✓ Linked: /usr/local/bin/rebrew" },
         { cls: "tl-step", text: "▶ Setting up nvm + Node LTS..." },
         { cls: "tl-success", text: "✓ Done! Your Mac is re-brewed." },
       ];
