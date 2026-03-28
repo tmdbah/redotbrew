@@ -821,9 +821,10 @@
             <div class="step-num">1</div>
             <h3>Bootstrap</h3>
             <p>
-              Run <code>./bootstrap.sh</code> on any fresh Mac. It installs
-              Homebrew, your Brewfile, dotfiles via Stow, nvm + Node LTS, and
-              the <code>rebrew</code> CLI — all in a single pass.
+              Run <code>./bootstrap.sh</code> on any Mac. Pre-flight checks
+              validate sudo, Xcode CLT, and MAS login. Installs Homebrew, your
+              Brewfile, dotfiles via Stow, nvm + Node LTS, and the
+              <code>rebrew</code> CLI. Existing apps are skipped gracefully.
             </p>
           </div>
 
@@ -868,13 +869,14 @@
             <p>
               One-command Mac setup. Installs Homebrew, runs your Brewfile,
               applies dotfiles, bootstraps nvm + Node LTS, and installs the
-              <code>rebrew</code> CLI. Prompts for your Git identity — never
-              committed to the repo.
+              <code>rebrew</code> CLI. Pre-flight checks validate sudo, Xcode
+              CLT, and App Store login. Existing apps are skipped gracefully.
             </p>
             <div class="tags">
-              <span class="tag">Idempotent</span>
+              <span class="tag">Resilient</span>
               <span class="tag">--dry-run</span>
-              <span class="tag">Git identity</span>
+              <span class="tag">--force</span>
+              <span class="tag">Pre-flight</span>
             </div>
           </div>
 
@@ -940,12 +942,12 @@
           </p>
         </div>
         <div class="code-block" style="max-width: 680px; margin: 0 auto">
-          <pre><code>rebrew bootstrap [--dry-run]   Full macOS setup (Homebrew, packages, dotfiles, Git, Node)
-rebrew scan [--output-dir DIR] Audit installed apps and check Homebrew availability
-rebrew stow [--dry-run] [pkg]  Apply dotfile symlinks via GNU Stow
-rebrew sync [--apply]          Compare installed packages against Brewfile
-rebrew help                    Show help
-rebrew version                 Print version</code></pre>
+          <pre><code>rebrew bootstrap [--dry-run] [--force]  Full macOS setup (with pre-flight checks)
+rebrew scan [--output-dir DIR]         Audit installed apps and check Homebrew availability
+rebrew stow [--dry-run] [pkg]          Apply dotfile symlinks via GNU Stow
+rebrew sync [--apply]                  Compare installed packages against Brewfile
+rebrew help                            Show help
+rebrew version                         Print version</code></pre>
           <button
             class="copy-btn"
             data-code="rebrew help"
@@ -1155,16 +1157,17 @@ rebrew stow --dry-run      # preview dotfile symlinks</code></pre>
       /* ── terminal typewriter ─────────────────────────────────────── */
       const script = [
         { cls: "tl-prompt", text: "$ ./bootstrap.sh" },
-        { cls: "tl-step", text: "▶ Checking for Homebrew..." },
-        { cls: "tl-output", text: "  ✓ Already installed. Updating." },
-        { cls: "tl-step", text: "▶ Running brew bundle..." },
-        { cls: "tl-output", text: "  Installing 42 formulas and casks..." },
-        { cls: "tl-step", text: "▶ Stowing dotfiles..." },
-        { cls: "tl-output", text: "  zsh ✓  git ✓  vscode ✓  config ✓" },
-        { cls: "tl-step", text: "▶ Installing rebrew CLI..." },
-        { cls: "tl-output", text: "  ✓ Linked: /usr/local/bin/rebrew" },
-        { cls: "tl-step", text: "▶ Setting up nvm + Node LTS..." },
-        { cls: "tl-success", text: "✓ Done! Your Mac is re-brewed." },
+        { cls: "tl-step", text: "==> Running pre-flight checks..." },
+        { cls: "tl-output", text: " ✓  sudo credentials cached" },
+        { cls: "tl-output", text: " ✓  Xcode Command Line Tools installed" },
+        { cls: "tl-step", text: "==> Installing taps and formulae..." },
+        { cls: "tl-output", text: " ✓  Taps and formulae installed" },
+        { cls: "tl-step", text: "==> Installing 8 casks..." },
+        { cls: "tl-output", text: " ✓  visual-studio-code already installed" },
+        { cls: "tl-output", text: " ✓  docker-desktop installed" },
+        { cls: "tl-step", text: "==> Applying dotfiles with stow..." },
+        { cls: "tl-output", text: " ✓  Dotfiles applied" },
+        { cls: "tl-success", text: " ✓  All items installed successfully." },
       ];
 
       let lineIdx = 0,

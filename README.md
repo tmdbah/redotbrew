@@ -42,9 +42,18 @@ Audit, migrate, and automate your Mac setup through Homebrew. re.Brew scans what
 
 Runs the full macOS setup: Homebrew install, `brew bundle`, dotfile symlinks, Git identity, and Node LTS.
 
+The bootstrap is designed to be **resilient on real machines**:
+
+- **Pre-flight checks** — validates Xcode CLT, sudo access, MAS login, and Spotlight before starting
+- **Skip-if-installed** — casks already in `/Applications` are skipped instead of erroring
+- **Dependency ordering** — VSCode extensions only install after VSCode itself is confirmed available
+- **Structured output** — clear `✓ / ⚠ / ✖` progress indicators instead of raw Homebrew noise
+- **Graceful failures** — individual failures are tracked and reported without crashing the entire run
+
 ```sh
 rebrew bootstrap             # Full setup
 rebrew bootstrap --dry-run   # Preview without making changes
+rebrew bootstrap --force     # Reinstall existing casks
 ```
 
 ### `rebrew scan`
@@ -101,6 +110,7 @@ rebrew sync --commit       # Apply + git commit
 ## Structure
 
 - **bin/rebrew**: CLI entry point — routes subcommands to the scripts below.
+- **bin/lib/output.sh**: Shared output helpers (colors, `info`/`ok`/`warn`/`err`) used by all scripts.
 - **bin/sync.sh**: Brewfile sync logic (used by `rebrew sync`).
 - **bootstrap.sh**: Full macOS setup orchestration.
 - **Brewfile**: Homebrew package manifest.
