@@ -21,23 +21,12 @@ REBREW_ROOT="$(cd "$SYNC_BIN_DIR/.." && pwd)"
 
 BREWFILE="$REBREW_ROOT/Brewfile"
 
-# ── Colors ───────────────────────────────────────────────────────────────────
-if [[ -t 1 ]]; then
-  GREEN='\033[0;32m'
-  RED='\033[0;31m'
-  YELLOW='\033[0;33m'
-  CYAN='\033[0;36m'
-  BOLD='\033[1m'
-  DIM='\033[2m'
-  RESET='\033[0m'
-else
-  GREEN='' RED='' YELLOW='' CYAN='' BOLD='' DIM='' RESET=''
-fi
+# ── Shared output helpers ────────────────────────────────────────────────────
+# shellcheck source=lib/output.sh
+. "$SYNC_BIN_DIR/lib/output.sh"
 
-info()  { printf "${CYAN}==> %s${RESET}\n" "$*"; }
-ok()    { printf "${GREEN} ✓  %s${RESET}\n" "$*"; }
-warn()  { printf "${YELLOW} ⚠  %s${RESET}\n" "$*"; }
-err()   { printf "${RED} ✖  %s${RESET}\n" "$*" >&2; }
+# sync.sh uses DIM in its drift report
+DIM="${_DIM}" BOLD="${_BOLD}" GREEN="${_GREEN}" RED="${_RED}" RESET="${_RESET}"
 
 # ── Help ─────────────────────────────────────────────────────────────────────
 show_help() {
