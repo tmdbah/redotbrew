@@ -157,7 +157,7 @@ if ! run brew bundle --file "$BREWFILE" --no-cask --no-vscode --no-mas; then
   FAILED_ITEMS+=("[brew] bundle (taps + formulae)")
 else
   ok "Taps and formulae installed"
-  (( SUCCESS_COUNT += tap_count + formula_count ))
+  (( SUCCESS_COUNT++ ))
 fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -170,15 +170,17 @@ done < <(grep '^cask "' "$BREWFILE" | sed -E 's/^cask "([^"]+)".*/\1/')
 
 if [[ ${#cask_lines[@]} -gt 0 ]]; then
   info "Installing ${#cask_lines[@]} casks..."
-  # Build set of already-installed casks (fast lookup)
-  installed_casks=""
+  # Build associative array of already-installed casks (O(1) lookup)
+  declare -A installed_cask_set
   if [[ "$DRY_RUN" != "true" ]]; then
-    installed_casks=$(brew list --cask 2>/dev/null || true)
+    while IFS= read -r c; do
+      [[ -n "$c" ]] && installed_cask_set["$c"]=1
+    done < <(brew list --cask 2>/dev/null || true)
   fi
 
   for cask_name in "${cask_lines[@]}"; do
     # Check if already installed
-    if [[ "$DRY_RUN" != "true" ]] && echo "$installed_casks" | grep -qx "$cask_name" 2>/dev/null; then
+    if [[ "$DRY_RUN" != "true" ]] && [[ -n "${installed_cask_set[$cask_name]:-}" ]]; then
       if [[ "$FORCE" == "true" ]]; then
         info "Reinstalling cask: $cask_name (--force)"
         if ! brew install --cask --force --no-quarantine "$cask_name"; then
@@ -260,10 +262,12 @@ if [[ ${#mas_lines[@]} -gt 0 ]]; then
     if [[ "$install_mas_lower" == "y" || "$install_mas_lower" == "yes" ]]; then
       info "Installing Mac App Store apps..."
 
-      # Phase 4B — Get list of already-installed MAS apps for skip logic
-      installed_mas_ids=""
+      # Phase 4B — Build associative array of already-installed MAS app IDs
+      declare -A installed_mas_set
       if [[ "$DRY_RUN" != "true" ]]; then
-        installed_mas_ids=$(mas list 2>/dev/null | awk '{print $1}' || true)
+        while IFS= read -r mid; do
+          [[ -n "$mid" ]] && installed_mas_set["$mid"]=1
+        done < <(mas list 2>/dev/null | awk '{print $1}' || true)
       fi
 
       for line in "${mas_lines[@]}"; do
@@ -271,7 +275,7 @@ if [[ ${#mas_lines[@]} -gt 0 ]]; then
         app_id=$(echo "$line" | sed -E 's/.*id: ([0-9]+).*/\1/')
 
         # Check if already installed
-        if [[ "$DRY_RUN" != "true" ]] && echo "$installed_mas_ids" | grep -qx "$app_id" 2>/dev/null; then
+        if [[ "$DRY_RUN" != "true" ]] && [[ -n "${installed_mas_set[$app_id]:-}" ]]; then
           ok "$app_name already installed"
           (( SUCCESS_COUNT++ ))
           continue
@@ -478,19 +482,25 @@ if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
     printf "    ${_RED}- %s${_RESET}\n" "$item"
   done
 
-  # Phase 5D — Context-aware next-step suggestions
+  # Phase 5D — Context-aware next-step suggestions (deduplicated by category)
   echo ""
   info "Suggested next steps:"
+  declare -A _shown_hints
   for item in "${FAILED_ITEMS[@]}"; do
+    hint=""
     case "$item" in
-      "[mas]"*)   echo "  → Sign into the App Store and run: rebrew bootstrap" ;;
-      "[cask]"*)  echo "  → Try: brew install --cask --force <cask-name>" ;;
-      "[vscode]"*) echo "  → Ensure VSCode is installed, then: rebrew bootstrap" ;;
-      "[stow]"*)  echo "  → Install stow (brew install stow) and run: rebrew stow" ;;
-      "[nvm]"*)   echo "  → Check nvm setup and run: nvm install --lts" ;;
-      *)          echo "  → Re-run: rebrew bootstrap" ;;
+      "[mas]"*)    hint="Sign into the App Store and run: rebrew bootstrap" ;;
+      "[cask]"*)   hint="Try: rebrew bootstrap --force (reinstalls existing casks)" ;;
+      "[vscode]"*) hint="Ensure VSCode is installed, then: rebrew bootstrap" ;;
+      "[stow]"*)   hint="Install stow (brew install stow) and run: rebrew stow" ;;
+      "[nvm]"*)    hint="Check nvm setup and run: nvm install --lts" ;;
+      *)           hint="Re-run: rebrew bootstrap" ;;
     esac
-  done | sort -u
+    if [[ -z "${_shown_hints[$hint]:-}" ]]; then
+      echo "  → $hint"
+      _shown_hints["$hint"]=1
+    fi
+  done
 
   echo ""
   echo "Open a new terminal (or run: source ~/.zshrc) to load updated shell config."
