@@ -34,8 +34,8 @@ BOLD="${_BOLD}" RESET="${_RESET}"
 # ── Version ──────────────────────────────────────────────────────────────────
 version() {
   local ver
-  if [[ -f "$REBREW_ROOT/VERSION" ]]; then
-    ver="$(cat "$REBREW_ROOT/VERSION")"
+  if [[ -f "$REBREW_ROOT/VERSION.txt" ]]; then
+    ver="$(cat "$REBREW_ROOT/VERSION.txt")"
   else
     ver="unknown"
   fi
