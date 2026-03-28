@@ -32,6 +32,7 @@ brew "mas"
 # ==========================================================
 
 cask "iterm2"
+cask "visual-studio-code"
 cask "docker-desktop"
 cask "claude-code"
 cask "copilot-cli"
