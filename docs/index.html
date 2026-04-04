@@ -834,9 +834,9 @@
             <div class="step-num">2</div>
             <h3>Manage Dotfiles</h3>
             <p>
-              Use <code>rebrew stow</code> to symlink Zsh, Git,
-              VS&nbsp;Code, and SSH configs from the repo into
-              <code>$HOME</code>. Change once, synced everywhere.
+              Use <code>rebrew stow</code> to symlink Zsh, Git, VS&nbsp;Code,
+              and SSH configs from the repo into <code>$HOME</code>. Change
+              once, synced everywhere.
             </p>
           </div>
 
@@ -846,9 +846,8 @@
             <div class="step-num">3</div>
             <h3>Audit &amp; Migrate</h3>
             <p>
-              Run <code>rebrew scan</code> to scan every app
-              and CLI tool, check Homebrew coverage, and get an interactive HTML
-              report.
+              Run <code>rebrew scan</code> to scan every app and CLI tool, check
+              Homebrew coverage, and get an interactive HTML report.
             </p>
           </div>
         </div>
@@ -870,7 +869,8 @@
               One-command Mac setup. Installs Homebrew, runs your Brewfile,
               applies dotfiles, bootstraps nvm + Node LTS, and installs the
               <code>rebrew</code> CLI. Pre-flight checks validate sudo, Xcode
-              CLT, and App Store login. Existing apps are skipped gracefully.
+              CLT, and App Store login. Existing apps, dotfile symlinks, and
+              VS&nbsp;Code extensions are skipped if already in place.
             </p>
             <div class="tags">
               <span class="tag">Resilient</span>
@@ -918,13 +918,14 @@
             <p>
               Compares your currently installed Homebrew packages against the
               Brewfile. Shows drift at a glance — additions, removals, and
-              mismatches. Use <code>--apply</code> to overwrite the Brewfile
-              with the current state.
+              mismatches. Use <code>--apply</code> to update the Brewfile while
+              preserving your curated section headers, sub-comments, and entry
+              ordering.
             </p>
             <div class="tags">
               <span class="tag">Drift detection</span>
               <span class="tag">--apply</span>
-              <span class="tag">Brewfile</span>
+              <span class="tag">Layout-preserving</span>
             </div>
           </div>
         </div>
@@ -948,12 +949,7 @@ rebrew stow [--dry-run] [pkg]          Apply dotfile symlinks via GNU Stow
 rebrew sync [--apply]                  Compare installed packages against Brewfile
 rebrew help                            Show help
 rebrew version                         Print version</code></pre>
-          <button
-            class="copy-btn"
-            data-code="rebrew help"
-          >
-            Copy
-          </button>
+          <button class="copy-btn" data-code="rebrew help">Copy</button>
         </div>
       </div>
     </section>
@@ -1098,9 +1094,9 @@ rebrew stow --dry-run      # preview dotfile symlinks</code></pre>
               >GNU Stow</a
             >
             — the elegant symlink farm manager. Stow makes it possible to
-            version-control your configs and reproduce them on any machine with a
-            single command. Sincere thanks to the GNU Stow maintainers for such
-            a simple and reliable tool.
+            version-control your configs and reproduce them on any machine with
+            a single command. Sincere thanks to the GNU Stow maintainers for
+            such a simple and reliable tool.
           </p>
         </div>
       </div>

@@ -45,7 +45,7 @@ Runs the full macOS setup: Homebrew install, `brew bundle`, dotfile symlinks, Gi
 The bootstrap is designed to be **resilient on real machines**:
 
 - **Pre-flight checks** — validates Xcode CLT, sudo access, MAS login, and Spotlight before starting
-- **Skip-if-installed** — casks already in `/Applications` are skipped instead of erroring
+- **Skip-if-installed** — casks already in `/Applications`, dotfile symlinks already pointing to the repo, and VS Code extensions already present are all skipped instead of erroring
 - **Dependency ordering** — VSCode extensions only install after VSCode itself is confirmed available
 - **Structured output** — clear `✓ / ⚠ / ✖` progress indicators instead of raw Homebrew noise
 - **Graceful failures** — individual failures are tracked and reported without crashing the entire run
@@ -67,6 +67,7 @@ rebrew scan --extra-paths ~/.cargo/bin     # Include extra binary directories
 ```
 
 **Prerequisites:**
+
 - **Homebrew** — required for availability checking
 - **mas** (optional) — enables Mac App Store detection (`brew install mas`)
 
@@ -97,7 +98,7 @@ Compares the current Homebrew state against your repo Brewfile and shows what's 
 ```sh
 rebrew sync                # Interactive — show diff, prompt for action
 rebrew sync --dry-run      # Show diff only, no changes
-rebrew sync --apply        # Overwrite Brewfile with current state
+rebrew sync --apply        # Update Brewfile, preserving section layout
 rebrew sync --commit       # Apply + git commit
 ```
 
@@ -111,6 +112,7 @@ rebrew sync --commit       # Apply + git commit
 
 - **bin/rebrew**: CLI entry point — routes subcommands to the scripts below.
 - **bin/lib/output.sh**: Shared output helpers (colors, `info`/`ok`/`warn`/`err`) used by all scripts.
+- **bin/lib/brewfile_format.sh**: Section-aware Brewfile merge — preserves headers, sub-comments, and entry ordering when syncing.
 - **bin/sync.sh**: Brewfile sync logic (used by `rebrew sync`).
 - **bootstrap.sh**: Full macOS setup orchestration.
 - **Brewfile**: Homebrew package manifest.
