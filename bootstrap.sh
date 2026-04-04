@@ -304,12 +304,44 @@ fi
 # ══════════════════════════════════════════════════════════════════════════════
 # Phase 1D — Check stow is available before calling stow_all.sh
 if command -v stow >/dev/null 2>&1; then
-  info "Applying dotfiles with stow..."
-  if ! run "$DOTFILES_DIR/bin/stow_all.sh"; then
-    FAILED_ITEMS+=("[stow] dotfiles")
+  # Check if all stow symlinks are already in place
+  _stow_packages=(zsh git vscode config ssh)
+  _stow_missing=false
+  if [[ "$DRY_RUN" != "true" && "$FORCE" != "true" ]]; then
+    for _pkg in "${_stow_packages[@]}"; do
+      _pkg_dir="$DOTFILES_DIR/$_pkg"
+      [[ -d "$_pkg_dir" ]] || continue
+      for _entry in "$_pkg_dir"/.[!.]* "$_pkg_dir"/*; do
+        [[ -e "$_entry" ]] || continue
+        _name="$(basename "$_entry")"
+        _target="$HOME/$_name"
+        if [[ ! -L "$_target" ]]; then
+          _stow_missing=true
+          break 2
+        fi
+        _link_dest="$(readlink "$_target" 2>/dev/null || true)"
+        case "$_link_dest" in
+          *"$DOTFILES_DIR/$_pkg/"*|"$DOTFILES_DIR/$_pkg/$_name") ;;
+          *) _stow_missing=true; break 2 ;;
+        esac
+      done
+    done
   else
-    ok "Dotfiles applied"
+    _stow_missing=true
+  fi
+
+  if [[ "$_stow_missing" == "false" ]]; then
+    ok "Dotfiles already applied"
+    SKIPPED_ITEMS+=("[stow] dotfiles (already applied)")
     (( SUCCESS_COUNT++ ))
+  else
+    info "Applying dotfiles with stow..."
+    if ! run "$DOTFILES_DIR/bin/stow_all.sh"; then
+      FAILED_ITEMS+=("[stow] dotfiles")
+    else
+      ok "Dotfiles applied"
+      (( SUCCESS_COUNT++ ))
+    fi
   fi
 else
   warn "GNU Stow not found — skipping dotfile symlinks"
@@ -412,37 +444,62 @@ if [[ -n "$VSCODE_CMD" ]]; then
   done < <(grep '^vscode "' "$BREWFILE" | sed -E 's/^vscode "([^"]+)".*/\1/')
 
   if [[ ${#vscode_exts[@]} -gt 0 ]]; then
-    info "Installing ${#vscode_exts[@]} VSCode extensions in parallel..."
-    if [[ "$DRY_RUN" == "true" ]]; then
-      for ext in "${vscode_exts[@]}"; do
-        echo "[dry-run] $VSCODE_CMD --install-extension $ext --force"
-      done
-    else
-      VSCODE_TMPDIR=$(mktemp -d)
-      for ext in "${vscode_exts[@]}"; do
-        (
-          if ! "$VSCODE_CMD" --install-extension "$ext" --force >"$VSCODE_TMPDIR/$ext.log" 2>&1; then
-            touch "$VSCODE_TMPDIR/FAIL.$ext"
-          fi
-        ) &
-      done
-      wait
+    # Build associative array of already-installed extensions (case-insensitive)
+    declare -A installed_ext_set
+    if [[ "$DRY_RUN" != "true" ]]; then
+      while IFS= read -r _ext; do
+        [[ -n "$_ext" ]] && installed_ext_set["${_ext,,}"]=1
+      done < <("$VSCODE_CMD" --list-extensions 2>/dev/null || true)
+    fi
 
-      ext_fail=0
-      for f in "$VSCODE_TMPDIR"/FAIL.*; do
-        [[ -e "$f" ]] || continue
-        ext="${f#$VSCODE_TMPDIR/FAIL.}"
-        FAILED_ITEMS+=("[vscode] $ext")
-        (( ext_fail++ ))
-      done
-      ext_ok=$(( ${#vscode_exts[@]} - ext_fail ))
-      (( SUCCESS_COUNT += ext_ok ))
-      if [[ "$ext_fail" -eq 0 ]]; then
-        ok "All ${#vscode_exts[@]} VSCode extensions installed"
+    # Partition extensions into already-installed and missing
+    missing_exts=()
+    for ext in "${vscode_exts[@]}"; do
+      if [[ "$DRY_RUN" != "true" && "$FORCE" != "true" ]] \
+         && [[ -n "${installed_ext_set[${ext,,}]:-}" ]]; then
+        ok "$ext already installed"
+        SKIPPED_ITEMS+=("[vscode] $ext (already installed)")
+        (( SUCCESS_COUNT++ ))
       else
-        warn "$ext_ok of ${#vscode_exts[@]} extensions installed ($ext_fail failed)"
+        missing_exts+=("$ext")
       fi
-      rm -rf "$VSCODE_TMPDIR"
+    done
+
+    if [[ ${#missing_exts[@]} -gt 0 ]]; then
+      info "Installing ${#missing_exts[@]} VSCode extensions in parallel..."
+      if [[ "$DRY_RUN" == "true" ]]; then
+        for ext in "${missing_exts[@]}"; do
+          echo "[dry-run] $VSCODE_CMD --install-extension $ext --force"
+        done
+      else
+        VSCODE_TMPDIR=$(mktemp -d)
+        for ext in "${missing_exts[@]}"; do
+          (
+            if ! "$VSCODE_CMD" --install-extension "$ext" --force >"$VSCODE_TMPDIR/$ext.log" 2>&1; then
+              touch "$VSCODE_TMPDIR/FAIL.$ext"
+            fi
+          ) &
+        done
+        wait
+
+        ext_fail=0
+        for f in "$VSCODE_TMPDIR"/FAIL.*; do
+          [[ -e "$f" ]] || continue
+          ext="${f#$VSCODE_TMPDIR/FAIL.}"
+          FAILED_ITEMS+=("[vscode] $ext")
+          (( ext_fail++ ))
+        done
+        ext_ok=$(( ${#missing_exts[@]} - ext_fail ))
+        (( SUCCESS_COUNT += ext_ok ))
+        if [[ "$ext_fail" -eq 0 ]]; then
+          ok "All ${#missing_exts[@]} new VSCode extensions installed"
+        else
+          warn "$ext_ok of ${#missing_exts[@]} extensions installed ($ext_fail failed)"
+        fi
+        rm -rf "$VSCODE_TMPDIR"
+      fi
+    else
+      ok "All ${#vscode_exts[@]} VSCode extensions already installed"
     fi
   fi
 else

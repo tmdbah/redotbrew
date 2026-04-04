@@ -25,6 +25,10 @@ BREWFILE="$REBREW_ROOT/Brewfile"
 # shellcheck source=lib/output.sh
 . "$SYNC_BIN_DIR/lib/output.sh"
 
+# ── Brewfile merge helper ────────────────────────────────────────────────────
+# shellcheck source=lib/brewfile_format.sh
+. "$SYNC_BIN_DIR/lib/brewfile_format.sh"
+
 # sync.sh uses DIM in its drift report
 DIM="${_DIM}" BOLD="${_BOLD}" GREEN="${_GREEN}" RED="${_RED}" RESET="${_RESET}"
 
@@ -36,9 +40,10 @@ Usage: rebrew sync [OPTIONS]
 
 Compare the current Homebrew state against the repo Brewfile, then
 optionally update the Brewfile and commit the changes.
+Section headers, comments, and entry ordering are preserved on apply.
 
 Options:
-  --apply        Overwrite the Brewfile with current Homebrew state (no prompt)
+  --apply        Update the Brewfile with current state (preserves layout)
   --commit       Apply and commit the updated Brewfile to Git
   --dry-run, -n  Show the diff only; make no changes
   --help, -h     Show this help message
@@ -142,9 +147,10 @@ echo ""
 
 # ── Act on mode ──────────────────────────────────────────────────────────────
 apply_changes() {
-  info "Updating Brewfile..."
-  cp "$TMPFILE" "$BREWFILE"
-  ok "Brewfile updated with current Homebrew state."
+  info "Updating Brewfile (preserving layout)..."
+  merge_brewfile "$BREWFILE" "$TMPFILE" > "$BREWFILE.tmp"
+  mv "$BREWFILE.tmp" "$BREWFILE"
+  ok "Brewfile updated — section layout preserved."
 }
 
 commit_changes() {
