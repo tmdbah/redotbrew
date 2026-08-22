@@ -116,6 +116,8 @@ export PATH="/opt/homebrew/bin:$PATH"
 export JAVA_HOME=$(/usr/libexec/java_home -v 17.0.15)
 export PATH=$JAVA_HOME/bin:$PATH
 export PATH=${PATH}:/usr/local/mysql/bin
+# libpq (psql, pg_dump, etc.) is keg-only, so it's not symlinked onto PATH by default.
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 # The following lines have been added by Docker Desktop to enable Docker CLI completions.
 fpath=($HOME/.docker/completions $fpath)
 autoload -Uz compinit
@@ -128,3 +130,4 @@ command -v ng >/dev/null 2>&1 && source <(ng completion script)
 
 # Initialize Starship prompt
 eval "$(starship init zsh)"
+

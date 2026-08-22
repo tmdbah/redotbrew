@@ -13,6 +13,7 @@ brew "git-gui"
 brew "wget"
 brew "starship"
 brew "stow"
+brew "libpq"
 
 # ==========================================================
 # Development Runtimes & Build Tools
