@@ -37,6 +37,7 @@ cask "visual-studio-code"
 cask "docker-desktop"
 cask "claude-code"
 cask "copilot-cli"
+cask "postgres-app"
 
 # ==========================================================
 # Productivity Applications
