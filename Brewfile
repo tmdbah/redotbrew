@@ -16,6 +16,7 @@ brew "starship"
 brew "stow"
 brew "libpq"
 brew "hashicorp/tap/terraform"
+brew "awscli"
 
 # ==========================================================
 # Development Runtimes & Build Tools

@@ -131,3 +131,6 @@ command -v ng >/dev/null 2>&1 && source <(ng completion script)
 # Initialize Starship prompt
 eval "$(starship init zsh)"
 
+
+autoload -U +X bashcompinit && bashcompinit
+complete -o nospace -C /opt/homebrew/bin/terraform terraform
