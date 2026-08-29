@@ -3,6 +3,7 @@
 # ==========================================================
 
 tap "homebrew/autoupdate"
+tap "hashicorp/tap"
 
 # ==========================================================
 # Core CLI Development Tools
@@ -14,6 +15,7 @@ brew "wget"
 brew "starship"
 brew "stow"
 brew "libpq"
+brew "hashicorp/tap/terraform"
 
 # ==========================================================
 # Development Runtimes & Build Tools
@@ -38,6 +40,7 @@ cask "docker-desktop"
 cask "claude-code"
 cask "copilot-cli"
 cask "postgres-app"
+cask "github-copilot-app"
 
 # ==========================================================
 # Productivity Applications
@@ -45,7 +48,6 @@ cask "postgres-app"
 
 cask "alt-tab"
 cask "drawio"
-cask "local"
 
 # ==========================================================
 # Development Frameworks / SDKs
